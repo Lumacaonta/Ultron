@@ -1,0 +1,119 @@
+name: Publish signed macOS ARM64 release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: GitHub release tag, for example v1.0.0
+        required: true
+        type: string
+      prerelease:
+        description: Mark the GitHub Release as a pre-release
+        required: true
+        default: true
+        type: boolean
+      notarize:
+        description: Sign and notarize with the configured Apple secrets
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: macos-14
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ULTRON_ARCH: arm64
+      ULTRON_CODESIGN_IDENTITY: ${{ secrets.ULTRON_CODESIGN_IDENTITY }}
+      ULTRON_APPLE_ID: ${{ secrets.ULTRON_APPLE_ID }}
+      ULTRON_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.ULTRON_APPLE_APP_SPECIFIC_PASSWORD }}
+      ULTRON_APPLE_TEAM_ID: ${{ secrets.ULTRON_APPLE_TEAM_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Import Developer ID certificate
+        if: inputs.notarize
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.ULTRON_MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.ULTRON_MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.ULTRON_MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_BASE64"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          python3 - <<'PYTHON'
+          import base64
+          import os
+          from pathlib import Path
+          Path('certificate.p12').write_bytes(
+              base64.b64decode(os.environ['CERTIFICATE_BASE64'])
+          )
+          PYTHON
+          security import certificate.p12 \
+            -k build.keychain \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security list-keychain -d user -s build.keychain login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" build.keychain
+          rm -f certificate.p12
+
+      - name: Install dependencies
+        run: ./scripts/bootstrap.sh
+
+      - name: Verify source and security boundaries
+        run: |
+          python scripts/repository-hygiene.py
+          backend/.venv/bin/python scripts/security-smoke-test.py
+          node --check desktop/main.cjs
+          node --check desktop/forge.config.cjs
+
+      - name: Build, verify and archive
+        env:
+          ULTRON_NOTARIZE: ${{ inputs.notarize && '1' || '0' }}
+        run: ./scripts/release-macos-arm64.sh
+
+      - name: Publish GitHub Release
+        env:
+          TAG: ${{ inputs.release_tag }}
+          PRE_RELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+        run: |
+          VERSION="$(node -p "require('./desktop/package.json').version")"
+          ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"
+          CHECKSUM="$ARCHIVE.sha256"
+          if [[ "$PRE_RELEASE" == "true" ]]; then
+            PRE_RELEASE_ARGUMENT=(--prerelease)
+          else
+            PRE_RELEASE_ARGUMENT=()
+          fi
+          gh release create "$TAG" "$ARCHIVE" "$CHECKSUM" \
+            --target "$GITHUB_SHA" \
+            --title "ULTRON $VERSION — macOS Apple Silicon" \
+            --notes-file .github/release-notes/v1.0.0-macos-arm64.md \
+            "${PRE_RELEASE_ARGUMENT[@]}"
+
+      - name: Remove temporary keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          rm -f certificate.p12

@@ -1,0 +1,80 @@
+name: Prepare Apple Silicon preview and clean public history
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  publish-preview:
+    # This one-time workflow only responds to the preparation commit created by
+    # the maintainer. It collapses the branch history before publishing so the
+    # default branch contains no local author email.
+    if: |
+      github.event.head_commit.message == 'Prepare ULTRON Apple Silicon preview' ||
+      github.event.head_commit.message == 'Repair ULTRON Apple Silicon preview'
+    runs-on: macos-14
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ULTRON_ARCH: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          persist-credentials: true
+
+      - name: Create a privacy-safe source root commit
+        run: |
+          git checkout --orphan privacy-safe-main
+          git add -A
+          git -c user.name='github-actions[bot]' \
+            -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+            commit -m 'ULTRON 1.0.0 source release'
+          echo "ULTRON_RELEASE_SHA=$(git rev-parse HEAD)" >> "$GITHUB_ENV"
+          git push --force origin HEAD:main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Install dependencies
+        run: ./scripts/bootstrap.sh
+
+      - name: Verify source and security boundaries
+        run: |
+          python scripts/repository-hygiene.py
+          backend/.venv/bin/python scripts/security-smoke-test.py
+          node --check desktop/main.cjs
+          node --check desktop/forge.config.cjs
+
+      - name: Build, verify and archive Apple Silicon preview
+        run: ./scripts/release-macos-arm64.sh
+
+      - name: Publish preview assets
+        run: |
+          VERSION="$(node -p "require('./desktop/package.json').version")"
+          TAG="v$VERSION-macos-arm64-preview.1"
+          ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"
+          CHECKSUM="$ARCHIVE.sha256"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$ARCHIVE" "$CHECKSUM" --clobber
+          else
+            gh release create "$TAG" "$ARCHIVE" "$CHECKSUM" \
+              --target "$ULTRON_RELEASE_SHA" \
+              --title "ULTRON $VERSION — Apple Silicon Preview" \
+              --notes-file .github/release-notes/v1.0.0-macos-arm64-preview.md \
+              --prerelease
+          fi
