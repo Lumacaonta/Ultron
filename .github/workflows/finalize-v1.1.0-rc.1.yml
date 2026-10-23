@@ -61,12 +61,10 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git reset --hard "$GITHUB_SHA"
           git clean -fdx
-          git switch --orphan clean-main
-          rm -f .github/workflows/finalize-v1.1.0-rc.1.yml
-          git add -A
+          git rm -f .github/workflows/finalize-v1.1.0-rc.1.yml
           git commit -m "ULTRON 1.1.0 final candidate source"
           FINAL_SHA="$(git rev-parse HEAD)"
-          git push --force origin "HEAD:main"
+          git push origin "HEAD:main"
           echo "sha=$FINAL_SHA" >> "$GITHUB_OUTPUT"
           echo "asset_dir=$ASSET_DIR" >> "$GITHUB_OUTPUT"
 
