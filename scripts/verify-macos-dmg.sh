@@ -84,7 +84,7 @@ if [[ ! -L "$MOUNT_POINT/Applications" ]] ||
 fi
 
 if [[ ! -f "$MOUNT_POINT/START HERE.txt" ]] ||
-  ! rg -Fq 'Drag ULTRON ai.app' "$MOUNT_POINT/START HERE.txt"; then
+  ! grep -Fq 'Drag ULTRON ai.app' "$MOUNT_POINT/START HERE.txt"; then
   printf 'Installer guide is missing or incomplete.\n' >&2
   exit 1
 fi

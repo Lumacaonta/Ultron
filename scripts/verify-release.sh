@@ -92,13 +92,13 @@ for executable in \
     printf 'Required arm64 executable is missing: %s\n' "${executable}" >&2
     exit 1
   fi
-  if ! lipo -archs "${executable}" | tr ' ' '\n' | rg -x 'arm64' >/dev/null; then
+  if ! lipo -archs "${executable}" | tr ' ' '\n' | grep -Fxq 'arm64'; then
     printf 'Required executable does not include arm64: %s\n' "${executable}" >&2
     exit 1
   fi
 done
 
-if "${ASAR_TOOL}" list "${APP_ASAR}" | rg -i '(backup|before-|\.env($|/)|\.db($|/)|auth\.secret|node_modules|resources|assets|release($|/)|forge\.config|ultron\.png)'; then
+if "${ASAR_TOOL}" list "${APP_ASAR}" | grep -Eiq '(backup|before-|\.env($|/)|\.db($|/)|auth\.secret|node_modules|resources|assets|release($|/)|forge\.config|ultron\.png)'; then
   printf 'The application archive contains an excluded release artifact.\n' >&2
   exit 1
 fi
@@ -147,14 +147,14 @@ if leaked_names:
 PYTHON
 fi
 
-resource_differences="$(diff -qr "${PROJECT_ROOT}/frontend/dist" "${PACKAGE_APP}/Contents/Resources/frontend" | rg -v '\.gitkeep$' || true)"
+resource_differences="$(diff -qr "${PROJECT_ROOT}/frontend/dist" "${PACKAGE_APP}/Contents/Resources/frontend" | grep -Ev '\.gitkeep$' || true)"
 if [[ -n "${resource_differences}" ]]; then
   printf 'Packaged frontend files do not match the current frontend build.\n' >&2
   printf '%s\n' "${resource_differences}" >&2
   exit 1
 fi
 
-if rg -n -i '/Users/|/home/|C:\\Users\\' \
+if grep -REni '/Users/|/home/|C:\\Users\\' \
   "${PROJECT_ROOT}/frontend/dist" \
   "${PACKAGE_APP}/Contents/Resources/frontend"; then
   printf 'A personal value was found in generated frontend resources.\n' >&2
