@@ -53,8 +53,14 @@ jobs:
       - name: Publish clean source
         id: source
         run: |
+          ASSET_DIR="${RUNNER_TEMP}/ultron-release-assets"
+          rm -rf "$ASSET_DIR"
+          mkdir -p "$ASSET_DIR"
+          cp -a desktop/release/. "$ASSET_DIR/"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git reset --hard "$GITHUB_SHA"
+          git clean -fdx
           git switch --orphan clean-main
           rm -f .github/workflows/finalize-v1.1.0-rc.1.yml
           git add -A
@@ -62,10 +68,12 @@ jobs:
           FINAL_SHA="$(git rev-parse HEAD)"
           git push --force origin "HEAD:main"
           echo "sha=$FINAL_SHA" >> "$GITHUB_OUTPUT"
+          echo "asset_dir=$ASSET_DIR" >> "$GITHUB_OUTPUT"
 
       - name: Publish GitHub pre-release
         env:
           FINAL_SHA: ${{ steps.source.outputs.sha }}
+          ASSET_DIR: ${{ steps.source.outputs.asset_dir }}
         run: |
           VERSION="$(node -p "require('./desktop/package.json').version")"
-          gh release create v1.1.0-rc.1             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg.sha256"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip.sha256"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt"             --target "$FINAL_SHA"             --title "ULTRON $VERSION — Apple Silicon final candidate"             --prerelease             --notes-file .github/release-notes/macos-arm64-preview.md
+          gh release create v1.1.0-rc.1             "$ASSET_DIR/ULTRON-ai-$VERSION-macos-arm64.dmg"             "$ASSET_DIR/ULTRON-ai-$VERSION-macos-arm64.dmg.sha256"             "$ASSET_DIR/ULTRON-ai-$VERSION-macos-arm64.zip"             "$ASSET_DIR/ULTRON-ai-$VERSION-macos-arm64.zip.sha256"             "$ASSET_DIR/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt"             --target "$FINAL_SHA"             --title "ULTRON $VERSION — Apple Silicon final candidate"             --prerelease             --notes-file .github/release-notes/macos-arm64-preview.md
