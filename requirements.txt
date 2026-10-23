@@ -1,0 +1,11 @@
+# ULTRON backend runtime
+fastapi>=0.115,<1
+uvicorn>=0.30,<1
+python-dotenv>=1,<2
+psutil>=6,<8
+pyserial>=3.5,<4
+pydantic>=2.8,<3
+ddgs>=9,<10
+
+# Required by scripts/build-macos.sh to create the bundled local backend.
+pyinstaller>=6,<7

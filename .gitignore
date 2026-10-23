@@ -1,0 +1,83 @@
+# Local secrets and account data
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.mobileprovision
+*.cer
+*.crt
+
+# ULTRON runtime data, account stores, and private exports
+/.ultron*/
+/backend/.ultron*/
+/backend/accounts.db
+/backend/auth.secret
+/backend/profiles/
+/backend/memory.db
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+*.jsonl
+
+# Personal files and diagnostic output
+.DS_Store
+Thumbs.db
+*.log
+*.log.*
+/backend.log
+/screenshots/
+/private/
+/exports/
+
+# Dependency directories and local tooling
+**/node_modules/
+**/.venv/
+**/venv/
+**/__pycache__/
+*.py[cod]
+*.so
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Generated web, Python, and Electron packages
+/frontend/dist/
+/backend/build/
+/backend/dist/
+/desktop/out/
+/desktop/make/
+/desktop/.webpack/
+/desktop/resources/frontend/*
+!/desktop/resources/frontend/.gitkeep
+/desktop/resources/backend/*
+!/desktop/resources/backend/.gitkeep
+*.app/
+*.dmg
+*.zip
+
+# Local editor, package-manager, and OS state
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Historic working copies and recovery artifacts
+*.backup
+*.bak
+*.before-*
+*.corrupted-*
+*.orig
+*.rej

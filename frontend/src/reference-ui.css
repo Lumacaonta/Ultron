@@ -1,0 +1,1422 @@
+
+/* =========================================================
+   ULTRON — REFERENCE UI COMPOSITION
+   DO NOT MODIFY NEURAL CORE VISUALS
+   DO NOT MODIFY HONEYCOMB VISUALS
+   ========================================================= */
+
+:root {
+  --ui-left: 250px;
+  --ui-right: 292px;
+}
+
+/* =========================================================
+   LEFT SIDEBAR
+   ========================================================= */
+
+.menu {
+  position: fixed !important;
+  z-index: 100 !important;
+
+  top: 0 !important;
+  left: 0 !important;
+  bottom: 0 !important;
+
+  width: var(--ui-left) !important;
+
+  padding: 118px 18px 18px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(7,7,7,.985),
+      rgba(3,3,3,.96)
+    ) !important;
+
+  border-right: 1px solid rgba(255,0,0,.14) !important;
+
+  box-shadow:
+    10px 0 35px rgba(0,0,0,.30) !important;
+}
+
+/* ULTRON logo */
+.menu::before {
+  content: "ULTRON  ai";
+
+  position: absolute;
+  top: 25px;
+  left: 52px;
+
+  color: #f1f1f1;
+
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .19em;
+
+  white-space: nowrap;
+
+  text-shadow:
+    0 0 18px rgba(255,0,0,.12);
+}
+
+/* Red mechanical mark */
+.menu::after {
+  content: "";
+
+  position: absolute;
+  top: 25px;
+  left: 22px;
+
+  width: 18px;
+  height: 18px;
+
+  border:
+    2px solid #ff2525;
+
+  transform: rotate(45deg);
+
+  box-shadow:
+    0 0 13px rgba(255,0,0,.38);
+}
+
+/* Menu items */
+.menu button {
+  position: relative !important;
+
+  width: 100% !important;
+  height: 58px !important;
+
+  margin: 0 !important;
+  padding: 0 16px 0 67px !important;
+
+  display: flex !important;
+  align-items: center !important;
+
+  color: #8a8a8a !important;
+
+  background: transparent !important;
+
+  border:
+    1px solid transparent !important;
+
+  border-radius: 8px !important;
+
+  font-size: 12px !important;
+  font-weight: 600 !important;
+  letter-spacing: .19em !important;
+
+  text-align: left !important;
+
+  transform: none !important;
+}
+
+/* Remove old small underline */
+.menu button span {
+  display: none !important;
+}
+
+/* Simple line-style icons */
+.menu button::before {
+  position: absolute;
+
+  left: 20px;
+
+  width: 30px;
+
+  color: #a5a5a5;
+
+  font-size: 24px;
+
+  text-align: center;
+
+  letter-spacing: 0;
+}
+
+/* Agent */
+.menu button:nth-child(1)::before {
+  content: "♙";
+}
+
+/* Memory */
+.menu button:nth-child(2)::before {
+  content: "◉";
+}
+
+/* Devices */
+.menu button:nth-child(3)::before {
+  content: "▣";
+}
+
+/* Settings */
+.menu button:nth-child(4)::before {
+  content: "⚙";
+}
+
+.menu button:hover {
+  color: #f2f2f2 !important;
+
+  background:
+    rgba(255,255,255,.025) !important;
+}
+
+.menu button.active {
+  color: #ffffff !important;
+
+  background:
+    linear-gradient(
+      90deg,
+      rgba(105,0,0,.56),
+      rgba(35,5,5,.34)
+    ) !important;
+
+  border-color:
+    rgba(255,0,0,.20) !important;
+
+  box-shadow:
+    inset 4px 0 0 #ff2525,
+    0 0 20px rgba(255,0,0,.05) !important;
+}
+
+/* =========================================================
+   TOP BAR
+   ========================================================= */
+
+.topbar {
+  left: var(--ui-left) !important;
+
+  width:
+    calc(
+      100% - var(--ui-left)
+    ) !important;
+
+  height: 52px !important;
+
+  padding:
+    0 22px !important;
+}
+
+/* Logo is now in sidebar */
+.topbar .logo {
+  display: none !important;
+}
+
+.top-status {
+  justify-content: flex-end !important;
+
+  font-size: 8px !important;
+
+  gap: 11px !important;
+}
+
+.top-status strong {
+  font-size: 13px !important;
+}
+
+/* =========================================================
+   CENTRAL NEURAL CORE AREA
+   ========================================================= */
+
+.brain-area {
+  position: absolute !important;
+
+  top: 52px !important;
+
+  left: var(--ui-left) !important;
+
+  right: var(--ui-right) !important;
+
+  bottom: 0 !important;
+
+  overflow: hidden !important;
+}
+
+/*
+ IMPORTANT:
+ restore the original brain scale.
+ We do not change the brain itself.
+*/
+.brain-area .brain-renderer {
+  transform:
+    scale(1.045) !important;
+
+  transform-origin:
+    50% 50% !important;
+}
+
+/* Keep title centered */
+.brain-title {
+  top: 14px !important;
+
+  left: 50% !important;
+
+  transform:
+    translateX(-50%) !important;
+
+  font-size: 11px !important;
+
+  letter-spacing: .28em !important;
+}
+
+/* =========================================================
+   AGENT INSIDE LEFT SIDEBAR
+   ========================================================= */
+
+.page-panel:has(.agent-chat) {
+  position: fixed !important;
+
+  z-index: 95 !important;
+
+  left: 18px !important;
+  right: auto !important;
+
+  top: 402px !important;
+  bottom: 18px !important;
+
+  width:
+    calc(
+      var(--ui-left) - 36px
+    ) !important;
+
+  height: auto !important;
+
+  max-height: none !important;
+
+  transform: none !important;
+
+  padding: 0 !important;
+
+  background: transparent !important;
+
+  border: 0 !important;
+
+  box-shadow: none !important;
+
+  overflow: visible !important;
+}
+
+/* Agent section header */
+.page-panel:has(.agent-chat) .page-panel-title {
+  margin:
+    0 0 8px 8px !important;
+
+  color: #ff3333 !important;
+
+  font-size: 8px !important;
+
+  letter-spacing: .22em !important;
+}
+
+/* Online line */
+.page-panel:has(.agent-chat) .agent-line {
+  margin:
+    0 8px 10px !important;
+
+  font-size: 8px !important;
+}
+
+/* Main Agent card */
+.page-panel:has(.agent-chat) .agent-chat {
+  width: 100% !important;
+
+  height:
+    calc(
+      100% - 45px
+    ) !important;
+
+  min-height: 0 !important;
+
+  padding: 12px !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(15,15,15,.95),
+      rgba(4,4,4,.90)
+    ) !important;
+
+  border:
+    1px solid rgba(255,0,0,.15) !important;
+
+  border-radius: 9px !important;
+
+  box-shadow:
+    0 15px 30px rgba(0,0,0,.35) !important;
+}
+
+.page-panel:has(.agent-chat) .agent-messages {
+  min-height: 0 !important;
+
+  max-height: none !important;
+
+  flex: 1 !important;
+
+  overflow-y: auto !important;
+}
+
+.page-panel:has(.agent-chat) .agent-input-wrap {
+  width: 100% !important;
+
+  flex-shrink: 0 !important;
+}
+
+/* =========================================================
+   OTHER PAGE PANELS
+   ========================================================= */
+
+.page-panel:not(:has(.agent-chat)):not(:has(.settings-workspace)) {
+  position: fixed !important;
+
+  z-index: 70 !important;
+
+  left:
+    calc(
+      var(--ui-left) +
+      ((100% - var(--ui-left) - var(--ui-right)) / 2)
+    ) !important;
+
+  right: auto !important;
+
+  bottom: 25px !important;
+
+  width: min(560px, 55vw) !important;
+
+  transform:
+    translateX(-50%) !important;
+}
+
+/* Settings gets the whole center workspace */
+.page-panel:has(.settings-workspace) {
+  position: fixed !important;
+
+  z-index: 70 !important;
+
+  left: var(--ui-left) !important;
+  right: var(--ui-right) !important;
+
+  top: 52px !important;
+  bottom: 0 !important;
+
+  width: auto !important;
+
+  max-width: none !important;
+}
+
+/* =========================================================
+   RIGHT LOCAL HOST COLUMN
+   ========================================================= */
+
+.system-panel {
+  position: fixed !important;
+
+  z-index: 80 !important;
+
+  top: 84px !important;
+
+  right: 20px !important;
+
+  width: 260px !important;
+
+  bottom: 205px !important;
+
+  display: flex !important;
+
+  flex-direction: column !important;
+
+  gap: 8px !important;
+}
+
+.system-panel .panel-title {
+  margin:
+    0 0 3px 0 !important;
+
+  color: #ff2424 !important;
+
+  font-size: 13px !important;
+
+  letter-spacing: .23em !important;
+}
+
+.system-panel .system-card {
+  width: 100% !important;
+
+  height: 68px !important;
+
+  min-height: 68px !important;
+
+  padding: 9px 11px !important;
+
+  border-radius: 9px !important;
+}
+
+/* =========================================================
+   PRINTER UNDER MAC COLUMN
+   ========================================================= */
+
+.printer-card {
+  position: fixed !important;
+
+  z-index: 82 !important;
+
+  left: auto !important;
+
+  right: 20px !important;
+
+  bottom: 18px !important;
+
+  width: 260px !important;
+
+  min-height: 172px !important;
+
+  padding: 14px !important;
+
+  border-radius: 10px !important;
+}
+
+/* =========================================================
+   DO NOT TOUCH BACKGROUND / HONEYCOMB
+   ========================================================= */
+
+.honeycomb-bg {
+  /* Existing honeycomb remains unchanged */
+}
+
+.ground-glow {
+  /* Existing glow remains unchanged */
+}
+
+/* =========================================================
+   RESPONSIVE FALLBACK
+   ========================================================= */
+
+@media (max-width: 1200px) {
+  :root {
+    --ui-left: 225px;
+    --ui-right: 270px;
+  }
+
+  .menu button {
+    height: 53px !important;
+
+    padding-left: 61px !important;
+  }
+}
+
+
+/* =========================================================
+   ULTRON — COMPOSITION FIX
+   Menu minimal / Agent visible / right column reduced
+   Neural Core and background untouched.
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   LEFT MENU — RESTORE MINIMAL STYLE
+   --------------------------------------------------------- */
+
+.menu {
+  width: 250px !important;
+  left: 24px !important;
+  top: 115px !important;
+  bottom: auto !important;
+
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  gap: 27px !important;
+}
+
+/* Remove artificial ULTRON logo from menu */
+.menu::before,
+.menu::after {
+  display: none !important;
+}
+
+/* Plain text buttons */
+.menu button {
+  width: max-content !important;
+  height: auto !important;
+
+  padding: 0 0 9px !important;
+
+  display: block !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+
+  color: #777 !important;
+
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: .20em !important;
+
+  box-shadow: none !important;
+}
+
+/* Remove icons completely */
+.menu button::before {
+  display: none !important;
+}
+
+/* Original animated underline */
+.menu button span {
+  display: block !important;
+
+  position: absolute !important;
+
+  left: 0 !important;
+  bottom: 0 !important;
+
+  width: 28px !important;
+  height: 1px !important;
+
+  background: #4a4a4a !important;
+
+  transition:
+    width .25s ease,
+    background .25s ease,
+    box-shadow .25s ease !important;
+}
+
+.menu button:hover,
+.menu button.active {
+  color: #fff !important;
+
+  background: transparent !important;
+  border: 0 !important;
+
+  transform: none !important;
+}
+
+.menu button:hover span,
+.menu button.active span {
+  width: 100% !important;
+
+  background: #ff2020 !important;
+
+  box-shadow:
+    0 0 8px rgba(255,0,0,.45) !important;
+}
+
+/* ---------------------------------------------------------
+   AGENT — REAL LEFT SIDEBAR PANEL
+   --------------------------------------------------------- */
+
+.page-panel:has(.agent-chat) {
+  position: fixed !important;
+
+  left: 17px !important;
+  right: auto !important;
+
+  top: 382px !important;
+  bottom: 16px !important;
+
+  width: 268px !important;
+  height: auto !important;
+
+  max-height: none !important;
+
+  padding: 0 !important;
+
+  transform: none !important;
+
+  background: transparent !important;
+
+  border: 0 !important;
+
+  box-shadow: none !important;
+
+  overflow: visible !important;
+
+  z-index: 95 !important;
+}
+
+/* Agent title */
+.page-panel:has(.agent-chat) .page-panel-title {
+  margin: 0 0 8px 8px !important;
+
+  color: #ff2b2b !important;
+
+  font-size: 8px !important;
+  letter-spacing: .20em !important;
+}
+
+/* Online indicator */
+.page-panel:has(.agent-chat) .agent-line {
+  margin: 0 8px 9px !important;
+
+  color: #666 !important;
+
+  font-size: 8px !important;
+}
+
+/* Main Agent box */
+.page-panel:has(.agent-chat) .agent-chat {
+  position: relative !important;
+
+  width: 100% !important;
+  height: calc(100% - 38px) !important;
+
+  min-height: 250px !important;
+
+  padding: 12px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13,13,13,.98),
+      rgba(4,4,4,.97)
+    ) !important;
+
+  border:
+    1px solid rgba(255,0,0,.16) !important;
+
+  border-radius: 8px !important;
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.45),
+    inset 0 1px rgba(255,255,255,.025) !important;
+}
+
+/* Message area */
+.page-panel:has(.agent-chat) .agent-messages {
+  flex: 1 !important;
+
+  min-height: 0 !important;
+
+  max-height: none !important;
+
+  overflow-y: auto !important;
+
+  padding-right: 3px !important;
+}
+
+/* Make actual text visible */
+.page-panel:has(.agent-chat) .agent-message-text {
+  color: #d9d9d9 !important;
+
+  font-size: 12px !important;
+
+  line-height: 1.45 !important;
+}
+
+/* Message role */
+.page-panel:has(.agent-chat) .agent-message-role {
+  color: #7e2929 !important;
+
+  font-size: 7px !important;
+}
+
+/* Input stays at bottom */
+.page-panel:has(.agent-chat) .agent-input-wrap {
+  flex: 0 0 auto !important;
+
+  margin-top: 9px !important;
+}
+
+.page-panel:has(.agent-chat)
+.agent-input-wrap textarea {
+  width: 100% !important;
+
+  min-height: 36px !important;
+
+  max-height: 70px !important;
+
+  color: #ddd !important;
+
+  font-size: 11px !important;
+}
+
+/* ---------------------------------------------------------
+   RIGHT MAC COLUMN — SMALLER
+   --------------------------------------------------------- */
+
+.system-panel {
+  top: 91px !important;
+  right: 18px !important;
+
+  width: 235px !important;
+
+  bottom: 202px !important;
+
+  gap: 6px !important;
+}
+
+/* Header */
+.system-panel .panel-title {
+  font-size: 11px !important;
+  letter-spacing: .24em !important;
+
+  margin-bottom: 1px !important;
+}
+
+/* Cards */
+.system-panel .system-card {
+  width: 235px !important;
+
+  height: 61px !important;
+  min-height: 61px !important;
+
+  padding: 8px 10px !important;
+
+  border-radius: 8px !important;
+}
+
+/* Card labels */
+.system-panel .system-card-top span {
+  font-size: 7px !important;
+}
+
+.system-panel .system-card-top strong {
+  font-size: 13px !important;
+}
+
+.system-panel .system-sub {
+  font-size: 6px !important;
+}
+
+/* Graphs */
+.system-panel .metric-chart,
+.system-panel .system-card-chart {
+  height: 17px !important;
+
+  margin-top: 3px !important;
+}
+
+/* ---------------------------------------------------------
+   PRINTER — SAME WIDTH AS MAC COLUMN
+   --------------------------------------------------------- */
+
+.printer-card {
+  right: 18px !important;
+
+  width: 235px !important;
+
+  min-height: 158px !important;
+
+  bottom: 16px !important;
+
+  padding: 12px !important;
+}
+
+/* Smaller printer internals */
+.printer-illustration {
+  width: 65px !important;
+  height: 48px !important;
+}
+
+.printer-header strong {
+  font-size: 10px !important;
+}
+
+.printer-header strong:last-child {
+  font-size: 7px !important;
+}
+
+.printer-data {
+  gap: 6px !important;
+  margin-top: 5px !important;
+}
+
+.printer-data span {
+  font-size: 5.5px !important;
+}
+
+.printer-data strong {
+  font-size: 8px !important;
+}
+
+/* ---------------------------------------------------------
+   KEEP CENTER CLEAN
+   --------------------------------------------------------- */
+
+.page-panel:has(.agent-chat) + * {
+  pointer-events: auto;
+}
+
+/* Do NOT modify brain renderer or honeycomb here. */
+
+
+/* =========================================================
+   LEFT SIDEBAR — AGENT / MEMORY / DEVICES
+   ========================================================= */
+
+.page-panel:has(.memory-row),
+.page-panel:has(.device-row) {
+  position: fixed !important;
+
+  left: 17px !important;
+  right: auto !important;
+
+  top: 382px !important;
+  bottom: 16px !important;
+
+  width: 268px !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+
+  transform: none !important;
+
+  padding: 14px !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13,13,13,.98),
+      rgba(4,4,4,.97)
+    ) !important;
+
+  border: 1px solid rgba(255,0,0,.16) !important;
+  border-radius: 8px !important;
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.45),
+    inset 0 1px rgba(255,255,255,.025) !important;
+
+  overflow: auto !important;
+
+  z-index: 95 !important;
+}
+
+.page-panel:has(.memory-row) .page-panel-title,
+.page-panel:has(.device-row) .page-panel-title {
+  margin: 0 0 16px 2px !important;
+
+  color: #ff2b2b !important;
+
+  font-size: 8px !important;
+  letter-spacing: .20em !important;
+}
+
+/* Memory */
+.page-panel:has(.memory-row) .memory-row {
+  grid-template-columns: 1fr 1fr 1fr !important;
+  gap: 7px !important;
+}
+
+.page-panel:has(.memory-row) .memory-row strong {
+  font-size: 14px !important;
+}
+
+.page-panel:has(.memory-row) .memory-row span {
+  font-size: 6px !important;
+}
+
+.page-panel:has(.memory-row) .memory-path {
+  margin-top: 14px !important;
+  font-size: 7px !important;
+  line-height: 1.45 !important;
+  white-space: normal !important;
+}
+
+/* Devices */
+.page-panel:has(.device-row) .device-row {
+  padding: 9px 0 !important;
+  margin: 0 !important;
+
+  border-bottom:
+    1px solid rgba(255,0,0,.08) !important;
+
+  font-size: 9px !important;
+}
+
+.page-panel:has(.device-row) .runtime-state {
+  font-size: 7px !important;
+}
+
+/* Keep the center free */
+.page-panel:has(.memory-row),
+.page-panel:has(.device-row) {
+  /* intentionally left-aligned */
+}
+
+
+/* =========================================================
+   LEFT WORKSPACE — AGENT / MEMORY / DEVICES
+   Same position / same size / internal scrolling
+   ========================================================= */
+
+/* AGENT, MEMORY and DEVICES share exactly the same box */
+.page-panel.page-panel:has(.agent-chat),
+.page-panel.page-panel:has(.memory-row),
+.page-panel.page-panel:has(.device-row) {
+  position: fixed !important;
+
+  left: 17px !important;
+  right: auto !important;
+
+  top: 382px !important;
+  bottom: 16px !important;
+
+  width: 268px !important;
+  height: auto !important;
+
+  min-height: 0 !important;
+  max-height: none !important;
+
+  transform: none !important;
+
+  box-sizing: border-box !important;
+
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+
+  z-index: 95 !important;
+}
+
+/* Same scrollbar for all three */
+.page-panel.page-panel:has(.agent-chat)::-webkit-scrollbar,
+.page-panel.page-panel:has(.memory-row)::-webkit-scrollbar,
+.page-panel.page-panel:has(.device-row)::-webkit-scrollbar {
+  width: 4px !important;
+}
+
+.page-panel.page-panel:has(.agent-chat)::-webkit-scrollbar-track,
+.page-panel.page-panel:has(.memory-row)::-webkit-scrollbar-track,
+.page-panel.page-panel:has(.device-row)::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.page-panel.page-panel:has(.agent-chat)::-webkit-scrollbar-thumb,
+.page-panel.page-panel:has(.memory-row)::-webkit-scrollbar-thumb,
+.page-panel.page-panel:has(.device-row)::-webkit-scrollbar-thumb {
+  background: #4d0d0d !important;
+  border-radius: 4px !important;
+}
+
+/* =========================================================
+   MEMORY
+   ========================================================= */
+
+.page-panel.page-panel:has(.memory-row) {
+  padding: 14px !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13,13,13,.98),
+      rgba(4,4,4,.97)
+    ) !important;
+
+  border:
+    1px solid rgba(255,0,0,.16) !important;
+
+  border-radius: 8px !important;
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.45),
+    inset 0 1px rgba(255,255,255,.025) !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .page-panel-title {
+  margin:
+    0 0 16px 2px !important;
+
+  color: #ff2b2b !important;
+
+  font-size: 8px !important;
+  letter-spacing: .20em !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .memory-row {
+  display: grid !important;
+
+  grid-template-columns:
+    repeat(3, minmax(0, 1fr)) !important;
+
+  gap: 7px !important;
+
+  width: 100% !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .memory-row div {
+  min-width: 0 !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .memory-row strong {
+  font-size: 14px !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .memory-row span {
+  font-size: 6px !important;
+}
+
+.page-panel.page-panel:has(.memory-row) .memory-path {
+  margin-top: 14px !important;
+
+  font-size: 7px !important;
+  line-height: 1.5 !important;
+
+  white-space: normal !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* =========================================================
+   DEVICES
+   ========================================================= */
+
+.page-panel.page-panel:has(.device-row) {
+  padding: 14px !important;
+
+  background:
+    linear-gradient(
+      145deg,
+      rgba(13,13,13,.98),
+      rgba(4,4,4,.97)
+    ) !important;
+
+  border:
+    1px solid rgba(255,0,0,.16) !important;
+
+  border-radius: 8px !important;
+
+  box-shadow:
+    0 15px 35px rgba(0,0,0,.45),
+    inset 0 1px rgba(255,255,255,.025) !important;
+}
+
+.page-panel.page-panel:has(.device-row) .page-panel-title {
+  margin:
+    0 0 12px 2px !important;
+
+  color: #ff2b2b !important;
+
+  font-size: 8px !important;
+  letter-spacing: .20em !important;
+}
+
+.page-panel.page-panel:has(.device-row) .device-row {
+  width: 100% !important;
+
+  min-height: 42px !important;
+
+  margin: 0 !important;
+  padding: 10px 0 !important;
+
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+
+  border-bottom:
+    1px solid rgba(255,0,0,.08) !important;
+
+  font-size: 8px !important;
+}
+
+.page-panel.page-panel:has(.device-row) .device-row > span {
+  min-width: 0 !important;
+}
+
+.page-panel.page-panel:has(.device-row) .runtime-state {
+  flex-shrink: 0 !important;
+  font-size: 7px !important;
+}
+
+/* =========================================================
+   AGENT — KEEP SAME OUTER BOX
+   ========================================================= */
+
+.page-panel.page-panel:has(.agent-chat) {
+  padding: 0 !important;
+
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+
+  overflow-x: hidden !important;
+  overflow-y: hidden !important;
+}
+
+.page-panel.page-panel:has(.agent-chat) .page-panel-title {
+  margin:
+    0 0 8px 8px !important;
+}
+
+.page-panel.page-panel:has(.agent-chat) .agent-line {
+  margin:
+    0 8px 9px !important;
+}
+
+/* Chat itself stays inside the same 268px column */
+.page-panel.page-panel:has(.agent-chat) .agent-chat {
+  width: 100% !important;
+
+  box-sizing: border-box !important;
+
+  min-height: 250px !important;
+
+  overflow: hidden !important;
+}
+
+
+/* =========================================================
+   SETTINGS — REAL INTERNAL SCROLL
+   ========================================================= */
+
+.page-panel:has(.settings-workspace) {
+  overflow: hidden !important;
+}
+
+.settings-workspace {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Right-side Settings content */
+.settings-workspace > *:last-child {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  scrollbar-width: thin !important;
+  scrollbar-color: #5a1111 transparent !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar-thumb {
+  background: #5a1111 !important;
+  border-radius: 8px !important;
+}
+
+/* Skills list can also scroll independently when it gets large */
+.skills-list {
+  max-height: calc(100vh - 365px) !important;
+  min-height: 80px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding-right: 6px !important;
+
+  scrollbar-width: thin !important;
+  scrollbar-color: #5a1111 transparent !important;
+}
+
+.skills-list::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.skills-list::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.skills-list::-webkit-scrollbar-thumb {
+  background: #5a1111 !important;
+  border-radius: 8px !important;
+}
+
+/* Editor must remain reachable */
+.skill-editor {
+  position: relative !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  margin-top: 14px !important;
+  margin-bottom: 20px !important;
+}
+
+/* Never let cards force the workspace wider */
+.skill-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   SETTINGS — BUTTONS ALWAYS USABLE
+   ========================================================= */
+
+.skills-summary-actions {
+  position: sticky !important;
+  top: 0 !important;
+
+  z-index: 20 !important;
+
+  padding-bottom: 10px !important;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(4,4,4,.98) 0%,
+      rgba(4,4,4,.92) 80%,
+      rgba(4,4,4,0) 100%
+    ) !important;
+}
+
+/* =========================================================
+   SKILL EDITOR — KEEP INSIDE AVAILABLE SPACE
+   ========================================================= */
+
+.skill-editor {
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.skill-editor form {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.skill-editor .settings-field {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.skill-editor .settings-input,
+.skill-editor .settings-select {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+
+/* =========================================================
+   SETTINGS — REAL INTERNAL SCROLL
+   ========================================================= */
+
+.page-panel:has(.settings-workspace) {
+  overflow: hidden !important;
+}
+
+.settings-workspace {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Right-side Settings content */
+.settings-workspace > *:last-child {
+  min-height: 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  scrollbar-width: thin !important;
+  scrollbar-color: #5a1111 transparent !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar {
+  width: 6px !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.settings-workspace > *:last-child::-webkit-scrollbar-thumb {
+  background: #5a1111 !important;
+  border-radius: 8px !important;
+}
+
+/* Skills list can also scroll independently when it gets large */
+.skills-list {
+  max-height: calc(100vh - 365px) !important;
+  min-height: 80px !important;
+
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+
+  padding-right: 6px !important;
+
+  scrollbar-width: thin !important;
+  scrollbar-color: #5a1111 transparent !important;
+}
+
+.skills-list::-webkit-scrollbar {
+  width: 5px !important;
+}
+
+.skills-list::-webkit-scrollbar-track {
+  background: transparent !important;
+}
+
+.skills-list::-webkit-scrollbar-thumb {
+  background: #5a1111 !important;
+  border-radius: 8px !important;
+}
+
+/* Editor must remain reachable */
+.skill-editor {
+  position: relative !important;
+
+  max-height: none !important;
+
+  overflow: visible !important;
+
+  margin-top: 14px !important;
+  margin-bottom: 20px !important;
+}
+
+/* Never let cards force the workspace wider */
+.skill-card {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* =========================================================
+   SETTINGS — BUTTONS ALWAYS USABLE
+   ========================================================= */
+
+.skills-summary-actions {
+  position: sticky !important;
+  top: 0 !important;
+
+  z-index: 20 !important;
+
+  padding-bottom: 10px !important;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(4,4,4,.98) 0%,
+      rgba(4,4,4,.92) 80%,
+      rgba(4,4,4,0) 100%
+    ) !important;
+}
+
+/* =========================================================
+   SKILL EDITOR — KEEP INSIDE AVAILABLE SPACE
+   ========================================================= */
+
+.skill-editor {
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.skill-editor form {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.skill-editor .settings-field {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.skill-editor .settings-input,
+.skill-editor .settings-select {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}

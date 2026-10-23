@@ -1,0 +1,19 @@
+{
+  "name": "ultron-ai",
+  "productName": "ULTRON ai",
+  "version": "1.0.0",
+  "description": "Local-first desktop AI workspace",
+  "main": "main.cjs",
+  "author": "ULTRON contributors",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron-forge start",
+    "package": "electron-forge package",
+    "make": "electron-forge make"
+  },
+  "devDependencies": {
+    "@electron-forge/cli": "^8.0.1",
+    "@electron-forge/maker-zip": "^8.0.1",
+    "electron": "^44.9.3"
+  }
+}

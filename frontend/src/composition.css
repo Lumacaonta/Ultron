@@ -1,0 +1,203 @@
+
+/* =========================================================
+   ULTRON — REFERENCE COMPOSITION
+   Only layout/composition.
+   Neural Core visual itself is untouched.
+   ========================================================= */
+
+:root {
+  --left-column: 286px;
+  --right-column: 300px;
+  --top-height: 72px;
+}
+
+/* ---------------------------------------------------------
+   GLOBAL BACKGROUND
+   Same visual style, slightly more red.
+   --------------------------------------------------------- */
+
+.ultron {
+  background:
+    radial-gradient(
+      circle at 48% 48%,
+      rgba(150, 0, 0, .17),
+      transparent 34%
+    ),
+    radial-gradient(
+      circle at 52% 92%,
+      rgba(255, 0, 0, .12),
+      transparent 52%
+    ),
+    #030303 !important;
+}
+
+/* Keep the existing honeycomb, only slightly stronger */
+.honeycomb-bg {
+  opacity: .48 !important;
+}
+
+.ground-glow {
+  opacity: .70 !important;
+}
+
+/* ---------------------------------------------------------
+   LEFT COMPOSITION
+   --------------------------------------------------------- */
+
+.menu {
+  width: 250px !important;
+
+  left: 25px !important;
+  top: 112px !important;
+
+  gap: 27px !important;
+
+  z-index: 60 !important;
+}
+
+/* Leave menu typography/style alone; only spacing */
+.menu button {
+  width: 240px !important;
+}
+
+/* Agent panel moves into the left column */
+.page-panel:has(.agent-chat) {
+  left: 16px !important;
+  top: 395px !important;
+  right: auto !important;
+  bottom: 15px !important;
+
+  width: 270px !important;
+  height: auto !important;
+  min-height: 315px !important;
+  max-height: none !important;
+
+  transform: none !important;
+
+  padding: 15px !important;
+}
+
+/* Agent itself fills the left panel */
+.page-panel:has(.agent-chat) .agent-chat {
+  width: 100% !important;
+  height: calc(100% - 35px) !important;
+  min-height: 240px !important;
+}
+
+/* ---------------------------------------------------------
+   CENTRAL BRAIN AREA
+   --------------------------------------------------------- */
+
+.brain-area {
+  top: var(--top-height) !important;
+  left: var(--left-column) !important;
+  right: var(--right-column) !important;
+  bottom: 0 !important;
+
+  overflow: hidden !important;
+}
+
+/*
+  IMPORTANT:
+  No .brain-renderer transformation here.
+  The Neural Core itself remains untouched.
+*/
+
+.brain-title {
+  top: 13px !important;
+}
+
+/* ---------------------------------------------------------
+   RIGHT MAC COLUMN
+   --------------------------------------------------------- */
+
+.system-panel {
+  top: 88px !important;
+  right: 20px !important;
+
+  width: var(--right-column) !important;
+
+  bottom: 205px !important;
+
+  gap: 7px !important;
+}
+
+/* Keep all cards inside the column */
+.system-panel .system-card {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* ---------------------------------------------------------
+   PRINTER
+   --------------------------------------------------------- */
+
+.printer-card {
+  left: auto !important;
+  right: 20px !important;
+  bottom: 16px !important;
+
+  width: var(--right-column) !important;
+  min-height: 165px !important;
+
+  z-index: 55 !important;
+}
+
+/* ---------------------------------------------------------
+   MEMORY / DEVICES
+   Keep centered in the main workspace.
+   --------------------------------------------------------- */
+
+.page-panel:not(:has(.agent-chat)):not(:has(.settings-workspace)) {
+  left: 50% !important;
+  right: auto !important;
+
+  width: 520px !important;
+  max-width: calc(
+    100% - var(--left-column) - var(--right-column) - 40px
+  ) !important;
+
+  bottom: 20px !important;
+
+  transform: translateX(-50%) !important;
+}
+
+/* ---------------------------------------------------------
+   SETTINGS
+   Full workspace remains full central area.
+   --------------------------------------------------------- */
+
+.page-panel:has(.settings-workspace) {
+  left: var(--left-column) !important;
+  right: var(--right-column) !important;
+  top: var(--top-height) !important;
+  bottom: 0 !important;
+
+  width: auto !important;
+  max-width: none !important;
+}
+
+/* ---------------------------------------------------------
+   SMALL WINDOW
+   --------------------------------------------------------- */
+
+@media (max-width: 1250px) {
+
+  :root {
+    --left-column: 255px;
+    --right-column: 265px;
+  }
+
+  .menu {
+    left: 20px !important;
+  }
+
+  .menu button {
+    width: 220px !important;
+  }
+
+  .page-panel:has(.agent-chat) {
+    width: 240px !important;
+  }
+
+}

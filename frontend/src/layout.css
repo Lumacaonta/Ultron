@@ -1,0 +1,272 @@
+
+/* =========================================================
+   ULTRON — MASTER LAYOUT
+   Window target: 1450 x 850
+   ========================================================= */
+
+:root {
+  --ultron-left: 150px;
+  --ultron-right: 315px;
+  --ultron-bottom-panel: 185px;
+}
+
+/* Main workspace */
+.brain-area {
+  position: absolute !important;
+  top: 72px !important;
+  left: var(--ultron-left) !important;
+  right: var(--ultron-right) !important;
+  bottom: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Brain */
+.brain-area .brain-renderer {
+  position: absolute !important;
+  inset: 18px 0 5px 0 !important;
+  transform: scale(.82) !important;
+  transform-origin: 50% 48% !important;
+}
+
+/* Core title */
+.brain-title {
+  top: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  z-index: 30 !important;
+}
+
+/* Left navigation */
+.menu {
+  top: 125px !important;
+  left: 32px !important;
+  gap: 28px !important;
+}
+
+.menu button {
+  font-size: 13px !important;
+  letter-spacing: .18em !important;
+}
+
+/* =========================================================
+   BOTTOM WORKSPACE
+   ========================================================= */
+
+.page-panel {
+  left: 50% !important;
+  bottom: 18px !important;
+  transform: translateX(-50%) !important;
+
+  width: 650px !important;
+  max-width: calc(100% - 40px) !important;
+
+  min-height: 0 !important;
+  max-height: var(--ultron-bottom-panel) !important;
+
+  padding: 15px 18px !important;
+
+  overflow: hidden auto !important;
+}
+
+.page-panel:has(.agent-chat) {
+  width: 650px !important;
+  height: 172px !important;
+  max-height: 172px !important;
+}
+
+.page-panel .agent-chat {
+  width: 100% !important;
+  height: 125px !important;
+  min-height: 125px !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.page-panel .agent-messages {
+  flex: 1 !important;
+  min-height: 55px !important;
+  max-height: 78px !important;
+  overflow-y: auto !important;
+}
+
+.page-panel .agent-input-wrap {
+  flex: 0 0 auto !important;
+  min-height: 38px !important;
+}
+
+.page-panel .agent-input-wrap textarea {
+  min-height: 34px !important;
+  max-height: 58px !important;
+  font-size: 13px !important;
+}
+
+.page-panel .agent-message-text {
+  font-size: 13px !important;
+  line-height: 1.45 !important;
+}
+
+/* =========================================================
+   RIGHT TELEMETRY
+   ========================================================= */
+
+.system-panel {
+  top: 94px !important;
+  right: 22px !important;
+  bottom: 205px !important;
+
+  width: 275px !important;
+
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 7px !important;
+}
+
+.system-panel .panel-title {
+  margin-bottom: 2px !important;
+  font-size: 13px !important;
+  letter-spacing: .24em !important;
+}
+
+.system-panel .system-card {
+  width: 100% !important;
+  height: 66px !important;
+  min-height: 66px !important;
+
+  padding: 8px 11px !important;
+  border-radius: 9px !important;
+}
+
+.system-panel .system-card-top strong {
+  font-size: 14px !important;
+}
+
+.system-panel .system-sub {
+  font-size: 7px !important;
+}
+
+.system-panel .metric-chart,
+.system-panel .system-card-chart {
+  height: 21px !important;
+  margin-top: 4px !important;
+}
+
+.system-panel .progress-line {
+  margin-top: 5px !important;
+}
+
+/* =========================================================
+   PRINTER
+   ========================================================= */
+
+.printer-card {
+  left: auto !important;
+  right: 22px !important;
+  bottom: 18px !important;
+
+  width: 275px !important;
+  min-height: 160px !important;
+
+  padding: 13px 14px !important;
+
+  border-radius: 10px !important;
+}
+
+.printer-illustration {
+  width: 80px !important;
+  height: 56px !important;
+}
+
+.printer-header strong {
+  font-size: 11px !important;
+}
+
+.printer-header strong:last-child {
+  font-size: 8px !important;
+}
+
+.printer-data {
+  gap: 8px !important;
+  margin-top: 6px !important;
+}
+
+.printer-data strong {
+  font-size: 9px !important;
+}
+
+/* =========================================================
+   GENERAL SCALE
+   ========================================================= */
+
+.topbar {
+  height: 72px !important;
+}
+
+.logo {
+  width: 210px !important;
+}
+
+.top-status {
+  font-size: 9px !important;
+}
+
+.selection-card {
+  right: 18px !important;
+  bottom: 205px !important;
+}
+
+/* Keep decorative layers secondary */
+.honeycomb-bg {
+  opacity: .38 !important;
+}
+
+.ground-glow {
+  opacity: .55 !important;
+}
+
+/* =========================================================
+   SETTINGS WORKSPACE
+   ========================================================= */
+
+.page-panel:has(.settings-workspace) {
+  position: absolute !important;
+  inset: 0 !important;
+
+  width: auto !important;
+  max-width: none !important;
+  max-height: none !important;
+
+  padding: 0 !important;
+
+  transform: none !important;
+
+  overflow: visible !important;
+
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.settings-workspace {
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+/* =========================================================
+   SMALLER WINDOW FALLBACK
+   ========================================================= */
+
+@media (max-width: 1250px) {
+  :root {
+    --ultron-left: 125px;
+    --ultron-right: 285px;
+  }
+
+  .system-panel,
+  .printer-card {
+    width: 250px !important;
+  }
+
+  .page-panel {
+    width: 560px !important;
+  }
+}

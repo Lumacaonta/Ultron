@@ -1,0 +1,49 @@
+name: Verify ULTRON
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Install backend dependencies
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/bin/python -m pip install --upgrade pip
+          backend/.venv/bin/pip install -r requirements.txt
+
+      - name: Install frontend and desktop dependencies
+        run: |
+          npm --prefix frontend ci
+          npm --prefix desktop ci
+
+      - name: Verify source, renderer, and desktop shell
+        run: |
+          python scripts/repository-hygiene.py
+          backend/.venv/bin/python -m py_compile backend/auth.py backend/email_service.py backend/launcher.py backend/main.py backend/memory.py backend/research.py backend/skills_api.py backend/skills_engine.py
+          node --check desktop/main.cjs
+          node --check desktop/forge.config.cjs
+          npm --prefix frontend run build
+
+      - name: Run isolated security smoke test
+        run: backend/.venv/bin/python scripts/security-smoke-test.py
