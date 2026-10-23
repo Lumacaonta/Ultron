@@ -13,7 +13,7 @@ jobs:
     runs-on: macos-14
     timeout-minutes: 55
     env:
-      GH_TOKEN: \${{ github.token }}
+      GH_TOKEN: ${{ github.token }}
       ULTRON_ARCH: arm64
       ULTRON_CODESIGN_IDENTITY: '-'
       ULTRON_NOTARIZE: '0'
@@ -56,8 +56,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git switch --orphan clean-main
-          git add -A
-          git rm --cached -f .github/workflows/finalize-v1.1.0-rc.1.yml
           rm -f .github/workflows/finalize-v1.1.0-rc.1.yml
           git add -A
           git commit -m "ULTRON 1.1.0 final candidate source"
@@ -67,16 +65,7 @@ jobs:
 
       - name: Publish GitHub pre-release
         env:
-          FINAL_SHA: \${{ steps.source.outputs.sha }}
+          FINAL_SHA: ${{ steps.source.outputs.sha }}
         run: |
           VERSION="$(node -p "require('./desktop/package.json').version")"
-          gh release create v1.1.0-rc.1 \
-            "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg" \
-            "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg.sha256" \
-            "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip" \
-            "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip.sha256" \
-            "desktop/release/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt" \
-            --target "$FINAL_SHA" \
-            --title "ULTRON $VERSION — Apple Silicon final candidate" \
-            --prerelease \
-            --notes-file .github/release-notes/macos-arm64-preview.md
+          gh release create v1.1.0-rc.1             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg.sha256"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip.sha256"             "desktop/release/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt"             --target "$FINAL_SHA"             --title "ULTRON $VERSION — Apple Silicon final candidate"             --prerelease             --notes-file .github/release-notes/macos-arm64-preview.md
