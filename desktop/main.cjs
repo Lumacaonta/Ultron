@@ -98,6 +98,33 @@ function isRendererUrl(url) {
   }
 }
 
+/*
+ * Media is the only browser permission ULTRON needs. Keep the decision in one
+ * place so a newly-added web surface cannot accidentally gain camera or screen
+ * capture access through Electron's broad `media` permission category.
+ */
+function isLocalMicrophonePermission(
+  webContents,
+  permission,
+  requestingOrigin,
+  requestedMedia
+) {
+  if (
+    permission !== 'media' ||
+    !webContents ||
+    !isRendererUrl(webContents.getURL()) ||
+    (requestingOrigin && !isRendererUrl(requestingOrigin))
+  ) {
+    return false
+  }
+
+  if (Array.isArray(requestedMedia)) {
+    return requestedMedia.length === 1 && requestedMedia[0] === 'audio'
+  }
+
+  return requestedMedia === 'audio'
+}
+
 function rendererFileForRequest(requestUrl) {
   if (!isRendererUrl(requestUrl)) {
     return null
@@ -492,13 +519,29 @@ app.whenReady().then(
      * macOS still owns the visible microphone prompt, which is triggered by
      * the operator pressing ARM VOICE in the command console.
      */
-    session.defaultSession.setPermissionCheckHandler((webContents, permission) => {
-      return permission === 'media' && isRendererUrl(webContents.getURL())
-    })
+    session.defaultSession.setPermissionCheckHandler(
+      (webContents, permission, requestingOrigin, details) => {
+        return isLocalMicrophonePermission(
+          webContents,
+          permission,
+          details?.securityOrigin || requestingOrigin,
+          details?.mediaType
+        )
+      }
+    )
 
-    session.defaultSession.setPermissionRequestHandler((webContents, permission, callback) => {
-      callback(permission === 'media' && isRendererUrl(webContents.getURL()))
-    })
+    session.defaultSession.setPermissionRequestHandler(
+      (webContents, permission, callback, details) => {
+        callback(
+          isLocalMicrophonePermission(
+            webContents,
+            permission,
+            details?.securityOrigin,
+            details?.mediaTypes
+          )
+        )
+      }
+    )
 
     if (
       process.platform ===

@@ -54,6 +54,7 @@ htmlcov/
 /backend/dist/
 /desktop/out/
 /desktop/make/
+/desktop/release/
 /desktop/.webpack/
 /desktop/resources/frontend/*
 !/desktop/resources/frontend/.gitkeep

@@ -22,10 +22,41 @@ function formatSize(bytes) {
   return `${(value / (1024 * 1024)).toFixed(1)} MB`
 }
 
+function MemoryOffline({ onOpenSettings }) {
+  return (
+    <section className="memory-workspace memory-offline">
+      <div className="memory-offline-core">
+        <span>VAULT LINK // OFFLINE</span>
+        <h2>Obsidian memory is not connected.</h2>
+        <p>Connect a local vault to inspect its real Markdown files, search their contents and open each note here.</p>
+        <button type="button" className="memory-primary" onClick={onOpenSettings}>
+          CONNECT OBSIDIAN VAULT
+        </button>
+      </div>
+    </section>
+  )
+}
+
 export default function MemoryPage({
   obsidianStatus,
   obsidianGraph,
   onOpenSettings,
+}) {
+  if (!obsidianStatus?.connected) {
+    return <MemoryOffline onOpenSettings={onOpenSettings} />
+  }
+
+  return (
+    <ConnectedMemoryPage
+      obsidianStatus={obsidianStatus}
+      obsidianGraph={obsidianGraph}
+    />
+  )
+}
+
+function ConnectedMemoryPage({
+  obsidianStatus,
+  obsidianGraph,
 }) {
   const [query, setQuery] = useState('')
   const [files, setFiles] = useState([])
@@ -37,7 +68,6 @@ export default function MemoryPage({
   const [loadingFile, setLoadingFile] = useState(false)
   const [error, setError] = useState('')
 
-  const connected = Boolean(obsidianStatus?.connected)
   const graphNodes = Array.isArray(obsidianGraph?.nodes)
     ? obsidianGraph.nodes.length
     : 0
@@ -69,14 +99,6 @@ export default function MemoryPage({
   }, [fileFilter, files])
 
   useEffect(() => {
-    if (!connected) {
-      setFiles([])
-      setTotal(0)
-      setSelectedPath('')
-      setSelectedFile(null)
-      return undefined
-    }
-
     let cancelled = false
     const controller = new AbortController()
 
@@ -120,13 +142,10 @@ export default function MemoryPage({
       controller.abort()
       window.clearTimeout(timer)
     }
-  }, [connected, query, obsidianStatus?.path])
+  }, [query, obsidianStatus?.path])
 
   useEffect(() => {
-    if (!connected || !selectedPath) {
-      setSelectedFile(null)
-      return undefined
-    }
+    if (!selectedPath) return undefined
 
     let cancelled = false
     const controller = new AbortController()
@@ -163,24 +182,12 @@ export default function MemoryPage({
       cancelled = true
       controller.abort()
     }
-  }, [connected, selectedPath])
+  }, [selectedPath])
 
-  if (!connected) {
-    return (
-      <section className="memory-workspace memory-offline">
-        <div className="memory-offline-core">
-          <span>VAULT LINK // OFFLINE</span>
-          <h2>Obsidian memory is not connected.</h2>
-          <p>Connect a local vault to inspect its real Markdown files, search their contents and open each note here.</p>
-          <button type="button" className="memory-primary" onClick={onOpenSettings}>
-            CONNECT OBSIDIAN VAULT
-          </button>
-        </div>
-      </section>
-    )
-  }
-
-  const note = selectedFile || selectedListItem
+  const activeSelectedFile = selectedFile?.path === selectedPath
+    ? selectedFile
+    : null
+  const note = activeSelectedFile || selectedListItem
   const selectedTags = Array.isArray(note?.tags) ? note.tags : []
   const selectedLinkCount = Number(note?.linkCount || 0)
   const indexIntegrity = loadingFiles
@@ -328,10 +335,10 @@ export default function MemoryPage({
               <div className="memory-note-content">
                 {loadingFile
                   ? <div className="memory-reading">DECRYPTING NOTE DATA…</div>
-                  : <pre>{selectedFile?.content || note.preview || 'This note has no readable text.'}</pre>}
+                  : <pre>{activeSelectedFile?.content || note.preview || 'This note has no readable text.'}</pre>}
               </div>
 
-              {selectedFile?.truncated && (
+              {activeSelectedFile?.truncated && (
                 <p className="memory-truncated">Preview truncated after 160 KB.</p>
               )}
             </>

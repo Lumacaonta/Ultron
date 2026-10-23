@@ -28,13 +28,22 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       ULTRON_ARCH: arm64
-      ULTRON_CODESIGN_IDENTITY: ${{ secrets.ULTRON_CODESIGN_IDENTITY }}
+      ULTRON_CODESIGN_IDENTITY: ${{ inputs.notarize && secrets.ULTRON_CODESIGN_IDENTITY || '-' }}
       ULTRON_APPLE_ID: ${{ secrets.ULTRON_APPLE_ID }}
       ULTRON_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.ULTRON_APPLE_APP_SPECIFIC_PASSWORD }}
       ULTRON_APPLE_TEAM_ID: ${{ secrets.ULTRON_APPLE_TEAM_ID }}
 
     steps:
       - uses: actions/checkout@v4
+
+      # A build without Developer ID signing and Apple notarization must remain
+      # visibly labelled as a pre-release.  This prevents a manual dispatch
+      # from presenting an ad-hoc package as a normal public release.
+      - name: Validate release visibility
+        if: ${{ !inputs.notarize && !inputs.prerelease }}
+        run: |
+          echo "A non-notarized macOS build can only be published as a pre-release." >&2
+          exit 1
 
       - uses: actions/setup-python@v5
         with:
@@ -85,6 +94,7 @@ jobs:
         run: |
           python scripts/repository-hygiene.py
           backend/.venv/bin/python scripts/security-smoke-test.py
+          backend/.venv/bin/python scripts/location-lookup-test.py
           node --check desktop/main.cjs
           node --check desktop/forge.config.cjs
 
@@ -97,19 +107,31 @@ jobs:
         env:
           TAG: ${{ inputs.release_tag }}
           PRE_RELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+          NOTARIZED: ${{ inputs.notarize && 'true' || 'false' }}
         run: |
           VERSION="$(node -p "require('./desktop/package.json').version")"
-          ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"
-          CHECKSUM="$ARCHIVE.sha256"
+          ZIP_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.zip"
+          ZIP_CHECKSUM="$ZIP_ARCHIVE.sha256"
+          DMG_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg"
+          DMG_CHECKSUM="$DMG_ARCHIVE.sha256"
+          CHECKSUM_MANIFEST="desktop/release/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt"
           if [[ "$PRE_RELEASE" == "true" ]]; then
             PRE_RELEASE_ARGUMENT=(--prerelease)
           else
             PRE_RELEASE_ARGUMENT=()
           fi
-          gh release create "$TAG" "$ARCHIVE" "$CHECKSUM" \
+          if [[ "$NOTARIZED" == "true" ]]; then
+            NOTES_FILE=".github/release-notes/macos-arm64.md"
+          else
+            NOTES_FILE=".github/release-notes/macos-arm64-preview.md"
+          fi
+          gh release create "$TAG" \
+            "$DMG_ARCHIVE" "$DMG_CHECKSUM" \
+            "$ZIP_ARCHIVE" "$ZIP_CHECKSUM" \
+            "$CHECKSUM_MANIFEST" \
             --target "$GITHUB_SHA" \
             --title "ULTRON $VERSION — macOS Apple Silicon" \
-            --notes-file .github/release-notes/v1.0.0-macos-arm64.md \
+            --notes-file "$NOTES_FILE" \
             "${PRE_RELEASE_ARGUMENT[@]}"
 
       - name: Remove temporary keychain

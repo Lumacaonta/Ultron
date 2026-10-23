@@ -3,6 +3,7 @@ import DevicesPage from './components/DevicesPage.jsx'
 import MemoryPage from './components/MemoryPage.jsx'
 import ModelDeckPage from './components/ModelDeckPage.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
+import OnboardingTutorial from './components/OnboardingTutorial.jsx'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { useEffect, useRef, useState } from 'react'
 import { BACKEND_ORIGIN as BACKEND } from './auth.js'
@@ -14,6 +15,12 @@ const DEFAULT_PREFERENCES = {
   scale: 100,
   motionEnabled: true,
   voiceEnabled: true,
+}
+
+const DEFAULT_WEATHER_CONFIG = {
+  label: 'LOCAL AREA',
+  lat: '',
+  lon: '',
 }
 
 const NAVIGATION_ITEMS = [
@@ -35,6 +42,50 @@ function loadPreferences(storageKey) {
     }
   } catch {
     return DEFAULT_PREFERENCES
+  }
+}
+
+function loadWeatherConfig(storageKey) {
+  try {
+    const saved = localStorage.getItem(storageKey)
+
+    if (!saved) return { ...DEFAULT_WEATHER_CONFIG }
+
+    const config = JSON.parse(saved)
+    if (!config || typeof config !== 'object' || Array.isArray(config)) {
+      return { ...DEFAULT_WEATHER_CONFIG }
+    }
+
+    return {
+      label: typeof config.label === 'string' ? config.label : DEFAULT_WEATHER_CONFIG.label,
+      lat: config.lat ?? '',
+      lon: config.lon ?? '',
+    }
+  } catch {
+    return { ...DEFAULT_WEATHER_CONFIG }
+  }
+}
+
+const ONBOARDING_VERSION = '1'
+
+function onboardingStorageKey(accountScope) {
+  return `ultron-onboarding:${accountScope}:v${ONBOARDING_VERSION}`
+}
+
+function shouldShowOnboarding(accountScope) {
+  try {
+    return localStorage.getItem(onboardingStorageKey(accountScope)) !== 'complete'
+  } catch {
+    // A locked-down browser cannot remember completion, but the guide remains usable.
+    return true
+  }
+}
+
+function markOnboardingComplete(accountScope) {
+  try {
+    localStorage.setItem(onboardingStorageKey(accountScope), 'complete')
+  } catch {
+    // Do not block the interface if browser storage is unavailable.
   }
 }
 
@@ -129,6 +180,10 @@ function describeCoreNode(node = {}) {
 
 function createChatMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+}
+
+function createChatMessageTimestamp() {
+  return Date.now()
 }
 
 function hasStoredCoordinates(config = {}) {
@@ -2936,8 +2991,13 @@ function normaliseVoiceText(value) {
     .trim()
 }
 
+function getVoiceRecognitionConstructor() {
+  if (typeof window === 'undefined') return null
+  return window.SpeechRecognition || window.webkitSpeechRecognition || null
+}
+
 function useUltronVoice({ onCommand, onWake }) {
-  const [supported, setSupported] = useState(false)
+  const [supported, setSupported] = useState(() => Boolean(getVoiceRecognitionConstructor()))
   const [phase, setPhase] = useState('off')
   const [liveTranscript, setLiveTranscript] = useState('')
   const [draft, setDraft] = useState('')
@@ -2976,13 +3036,8 @@ function useUltronVoice({ onCommand, onWake }) {
     }
   }
 
-  function recognitionConstructor() {
-    if (typeof window === 'undefined') return null
-    return window.SpeechRecognition || window.webkitSpeechRecognition || null
-  }
-
   function startRecognition() {
-    const Recognition = recognitionConstructor()
+    const Recognition = getVoiceRecognitionConstructor()
 
     if (!Recognition || !shouldRunRef.current || dispatchingRef.current) {
       return
@@ -3167,7 +3222,7 @@ function useUltronVoice({ onCommand, onWake }) {
   }
 
   function start() {
-    const Recognition = recognitionConstructor()
+    const Recognition = getVoiceRecognitionConstructor()
 
     if (!Recognition) {
       setSupported(false)
@@ -3203,8 +3258,6 @@ function useUltronVoice({ onCommand, onWake }) {
   }
 
   useEffect(() => {
-    setSupported(Boolean(recognitionConstructor()))
-
     return () => {
       shouldRunRef.current = false
       clearSilenceTimer()
@@ -3552,6 +3605,9 @@ function App({ user = null, onLogout = () => {} }) {
   const [activePage, setActivePage] =
     useState('AGENT')
 
+  const [onboardingOpen, setOnboardingOpen] =
+    useState(() => shouldShowOnboarding(accountScope))
+
   const [selected, setSelected] =
     useState(() => describeCoreNode(CORE_NODES[0]))
 
@@ -3632,11 +3688,7 @@ function App({ user = null, onLogout = () => {} }) {
     })
 
   const [weatherConfig, setWeatherConfig] =
-    useState({
-      label: 'LOCAL AREA',
-      lat: '',
-      lon: '',
-    })
+    useState(() => loadWeatherConfig(weatherStorageKey))
 
   useEffect(() => {
     agentMessagesRef.current = agentMessages
@@ -3749,7 +3801,9 @@ function App({ user = null, onLogout = () => {} }) {
   }
 
   useEffect(() => {
-    loadSystem()
+    const initialLoad = window.setTimeout(() => {
+      void loadSystem()
+    }, 0)
 
     const interval =
       setInterval(
@@ -3757,10 +3811,12 @@ function App({ user = null, onLogout = () => {} }) {
         1500
       )
 
-    return () =>
+    return () => {
+      window.clearTimeout(initialLoad)
       clearInterval(
         interval
       )
+    }
   }, [])
 
   async function loadPrinterStatus() {
@@ -3822,7 +3878,9 @@ function App({ user = null, onLogout = () => {} }) {
   }
 
   useEffect(() => {
-    loadPrinterStatus()
+    const initialLoad = window.setTimeout(() => {
+      void loadPrinterStatus()
+    }, 0)
 
     const timer =
       setInterval(
@@ -3830,8 +3888,10 @@ function App({ user = null, onLogout = () => {} }) {
         2500
       )
 
-    return () =>
+    return () => {
+      window.clearTimeout(initialLoad)
       clearInterval(timer)
+    }
   }, [])
 
   async function archiveChatMessage(text) {
@@ -3890,7 +3950,7 @@ function App({ user = null, onLogout = () => {} }) {
       role: "user",
       text: clean,
       speak: false,
-      createdAt: Date.now(),
+      createdAt: createChatMessageTimestamp(),
     }
 
     const conversationHistory = agentMessagesRef.current
@@ -4156,36 +4216,16 @@ function App({ user = null, onLogout = () => {} }) {
   }
 
   useEffect(() => {
-    const saved =
-      localStorage.getItem(
-        weatherStorageKey
-      )
+    if (!hasStoredCoordinates(weatherConfig)) return
 
-    if (saved) {
-      try {
-        const config =
-          JSON.parse(saved)
-
-        setWeatherConfig(
-          config
-        )
-
-        if (hasStoredCoordinates(config)) {
-          loadWeather(
-            config.lat,
-            config.lon,
-            config.label ||
-              'LOCAL AREA'
-          )
-
-          return
-        }
-      } catch {
-        // Ignore invalid configuration.
-      }
-    }
-
-  }, [weatherStorageKey])
+    void loadWeather(
+      weatherConfig.lat,
+      weatherConfig.lon,
+      weatherConfig.label || 'LOCAL AREA'
+    )
+    // This app instance is mounted for one signed-in account; later edits load via saveWeather.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function loadObsidian() {
     try {
@@ -4318,7 +4358,7 @@ function App({ user = null, onLogout = () => {} }) {
           role: 'assistant',
           text: reply,
           speak: false,
-          createdAt: Date.now(),
+          createdAt: createChatMessageTimestamp(),
         },
       ]
       agentMessagesRef.current = next
@@ -4331,6 +4371,11 @@ function App({ user = null, onLogout = () => {} }) {
     onCommand: sendAgentMessage,
     onWake: handleVoiceWake,
   })
+
+  function dismissOnboarding() {
+    markOnboardingComplete(accountScope)
+    setOnboardingOpen(false)
+  }
 
   const cpu =
     system?.cpu_percent
@@ -4580,6 +4625,7 @@ function App({ user = null, onLogout = () => {} }) {
               setPreferences={setPreferences}
               backendOnline={backendOnline}
               printerStatus={printerStatus}
+              onOpenTutorial={() => setOnboardingOpen(true)}
             />
           )}
 
@@ -4706,6 +4752,15 @@ function App({ user = null, onLogout = () => {} }) {
         />
 
       </aside>
+
+      {onboardingOpen && (
+        <OnboardingTutorial
+          accountName={accountName}
+          onDismiss={dismissOnboarding}
+          onOpenSettings={() => setActivePage('SETTINGS')}
+          onOpenDevices={() => setActivePage('DEVICES')}
+        />
+      )}
 
     </div>
   )

@@ -9,10 +9,11 @@ import sqlite3
 import stat
 import threading
 import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -71,6 +72,25 @@ ENABLE_API_DOCS = os.getenv("ULTRON_ENABLE_API_DOCS", "").strip().lower() in {
     "true",
     "yes",
 }
+
+# Global Position is deliberately an explicit UI action.  The Nominatim public
+# endpoint permits light, user-triggered use, but asks applications to identify
+# themselves, stay below one request per second, cache responses, and keep a
+# practical provider escape hatch.  Results live only in process memory: an
+# address search never becomes part of an ULTRON account profile until the
+# person confirms a position in Settings.
+LOCATION_PROVIDER_URL = (
+    os.getenv("ULTRON_GEOCODER_URL", "https://nominatim.openstreetmap.org/search")
+    .strip()
+    or "https://nominatim.openstreetmap.org/search"
+)
+LOCATION_LOOKUP_INTERVAL_SECONDS = 1.05
+LOCATION_CACHE_TTL_SECONDS = 15 * 60
+LOCATION_CACHE_LIMIT = 64
+LOCATION_RESPONSE_LIMIT_BYTES = 512 * 1024
+_location_lookup_lock = threading.Lock()
+_location_lookup_last_request_at = 0.0
+_location_lookup_cache: OrderedDict[str, tuple[float, list[dict[str, object]]]] = OrderedDict()
 
 
 def _active_account() -> dict:
@@ -1800,6 +1820,106 @@ def open_makerworld():
     return {"ok": True}
 
 
+def _location_provider_lookup_url(query: str) -> str:
+    """Build one safe request for a Nominatim-compatible HTTPS endpoint."""
+
+    parsed = urlparse(LOCATION_PROVIDER_URL)
+    if (
+        parsed.scheme != "https"
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+        or parsed.fragment
+    ):
+        raise HTTPException(
+            status_code=503,
+            detail="The local location provider configuration is invalid.",
+        )
+
+    params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    params.update(
+        {
+            "q": query,
+            "format": "jsonv2",
+            "limit": "3",
+            "addressdetails": "1",
+            "accept-language": "it",
+        }
+    )
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            urlencode(params),
+            "",
+        )
+    )
+
+
+def _cached_location_results(cache_key: str) -> list[dict[str, object]] | None:
+    """Return a short-lived in-memory location lookup cache entry, if fresh."""
+
+    now = time.monotonic()
+    with _location_lookup_lock:
+        cached = _location_lookup_cache.get(cache_key)
+        if cached is None:
+            return None
+
+        saved_at, results = cached
+        if now - saved_at > LOCATION_CACHE_TTL_SECONDS:
+            _location_lookup_cache.pop(cache_key, None)
+            return None
+
+        _location_lookup_cache.move_to_end(cache_key)
+        return [dict(item) for item in results]
+
+
+def _reserve_location_provider_request() -> None:
+    """Keep foreground location lookups inside the public provider rate limit."""
+
+    global _location_lookup_last_request_at
+
+    now = time.monotonic()
+    with _location_lookup_lock:
+        remaining = LOCATION_LOOKUP_INTERVAL_SECONDS - (
+            now - _location_lookup_last_request_at
+        )
+        if remaining > 0:
+            retry_after = max(1, int(remaining + 0.999))
+            raise HTTPException(
+                status_code=429,
+                detail="Please wait a moment before another location search.",
+                headers={"Retry-After": str(retry_after)},
+            )
+        _location_lookup_last_request_at = now
+
+
+def _cache_location_results(
+    cache_key: str,
+    results: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    """Keep a bounded, non-persistent cache without retaining mutable values."""
+
+    safe_results = [dict(item) for item in results]
+    with _location_lookup_lock:
+        _location_lookup_cache[cache_key] = (time.monotonic(), safe_results)
+        _location_lookup_cache.move_to_end(cache_key)
+        while len(_location_lookup_cache) > LOCATION_CACHE_LIMIT:
+            _location_lookup_cache.popitem(last=False)
+    return [dict(item) for item in safe_results]
+
+
+def _location_lookup_response(results: list[dict[str, object]]) -> dict[str, object]:
+    return {
+        "ok": True,
+        "results": results,
+        "provider": "OpenStreetMap Nominatim",
+        "attribution": "© OpenStreetMap contributors",
+    }
+
+
 @app.post("/api/location/resolve")
 def resolve_location(request: LocationLookupRequest):
     """Resolve a location only for an explicit, foreground UI request."""
@@ -1811,26 +1931,26 @@ def resolve_location(request: LocationLookupRequest):
             detail="Enter at least two characters to locate a place.",
         )
 
-    params = urlencode(
-        {
-            "q": query,
-            "format": "jsonv2",
-            "limit": 3,
-            "addressdetails": 1,
-            "accept-language": "it",
-        }
-    )
+    cache_key = query.casefold()
+    cached_results = _cached_location_results(cache_key)
+    if cached_results is not None:
+        return _location_lookup_response(cached_results)
+
+    _reserve_location_provider_request()
     lookup = Request(
-        f"https://nominatim.openstreetmap.org/search?{params}",
+        _location_provider_lookup_url(query),
         headers={
-            "User-Agent": "ULTRON-local-desktop/1.0 (location resolver)",
+            "User-Agent": "ULTRON-local-desktop/1.1 (location lookup; github.com/Lumacaonta/Ultron)",
             "Accept": "application/json",
         },
     )
 
     try:
         with urlopen(lookup, timeout=8) as response:
-            payload = json.loads(response.read().decode("utf-8"))
+            raw_payload = response.read(LOCATION_RESPONSE_LIMIT_BYTES + 1)
+            if len(raw_payload) > LOCATION_RESPONSE_LIMIT_BYTES:
+                raise ValueError("Location response exceeded the permitted size.")
+            payload = json.loads(raw_payload.decode("utf-8"))
     except HTTPError:
         raise HTTPException(
             status_code=503,
@@ -1896,7 +2016,7 @@ def resolve_location(request: LocationLookupRequest):
             }
         )
 
-    return {"ok": True, "results": results}
+    return _location_lookup_response(_cache_location_results(cache_key, results))
 
 
 

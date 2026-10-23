@@ -1,4 +1,5 @@
 const path = require('path')
+const { execFileSync } = require('child_process')
 
 const signingIdentity = (
   process.env.ULTRON_CODESIGN_IDENTITY || ''
@@ -43,18 +44,76 @@ const mainEntitlements = path.join(
   'entitlements.mac.plist'
 )
 
+/*
+ * Electron's stock macOS template advertises camera and Bluetooth access and
+ * permits arbitrary network loads. ULTRON does not need any of those. Remove
+ * the template metadata before Electron Packager reads and signs Info.plist;
+ * the microphone explanation below is the only user-facing media permission
+ * that remains in the shipped bundle.
+ */
+function hardenMacTemplatePlist({
+  buildPath,
+  platform,
+}) {
+  if (platform !== 'darwin') {
+    return
+  }
+
+  const plistPath = path.resolve(
+    buildPath,
+    '..',
+    '..',
+    'Info.plist'
+  )
+  const plistBuddy = '/usr/libexec/PlistBuddy'
+
+  for (const key of [
+    'NSCameraUsageDescription',
+    'NSAudioCaptureUsageDescription',
+    'NSBluetoothAlwaysUsageDescription',
+    'NSBluetoothPeripheralUsageDescription',
+  ]) {
+    try {
+      execFileSync(
+        plistBuddy,
+        ['-c', `Delete :${key}`, plistPath],
+        { stdio: 'ignore' }
+      )
+    } catch {
+      // The Electron template can omit a key on a future runtime version.
+    }
+  }
+
+  execFileSync(
+    plistBuddy,
+    [
+      '-c',
+      'Set :NSAppTransportSecurity:NSAllowsArbitraryLoads false',
+      plistPath,
+    ],
+    { stdio: 'ignore' }
+  )
+}
+
 module.exports = {
   packagerConfig: {
     name: 'ULTRON ai',
     executableName: 'ULTRON ai',
     appBundleId: 'io.ultronai.desktop',
+    appCategoryType: 'public.app-category.productivity',
+    darwinDarkModeSupport: true,
+    extendInfo: {
+      NSMicrophoneUsageDescription:
+        'ULTRON uses the microphone only when you start voice input.',
+    },
     asar: true,
+    afterInitialize: [hardenMacTemplatePlist],
     // The shell needs only main.cjs and package.json inside app.asar. Runtime
     // frontend/backend resources are copied below with extraResource, so keep
     // generated files, development tooling, and historic recovery copies out
     // of every distributable package.
     ignore: [
-      /\/(?:node_modules|assets|resources|out|make)(?:\/|$)/,
+      /\/(?:node_modules|assets|resources|out|make|release)(?:\/|$)/,
       /\/(?:forge\.config\.cjs|ultron\.png)$/,
       /\/.*\.(?:backup|bak|orig|rej)$/,
       /\/.*\.before-[^/]*$/,

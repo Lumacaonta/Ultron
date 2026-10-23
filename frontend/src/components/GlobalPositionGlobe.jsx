@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
@@ -87,26 +87,48 @@ function createWorldTexture() {
   canvas.height = 768
   const context = canvas.getContext('2d')
   const { width, height } = canvas
-  const ocean = context.createLinearGradient(0, 0, 0, height)
-  ocean.addColorStop(0, '#050308')
-  ocean.addColorStop(0.48, '#11030b')
-  ocean.addColorStop(1, '#050308')
+  const ocean = context.createRadialGradient(width * 0.52, height * 0.46, 18, width * 0.5, height * 0.5, width * 0.68)
+  ocean.addColorStop(0, '#2b0711')
+  ocean.addColorStop(0.42, '#13040b')
+  ocean.addColorStop(1, '#040306')
   context.fillStyle = ocean
   context.fillRect(0, 0, width, height)
 
+  context.save()
+  context.globalAlpha = 0.26
+  context.strokeStyle = '#a62335'
+  context.lineWidth = 1
+  for (let latitude = 0; latitude <= height; latitude += 64) {
+    context.beginPath()
+    context.moveTo(0, latitude)
+    context.lineTo(width, latitude)
+    context.stroke()
+  }
+  for (let longitude = 0; longitude <= width; longitude += 96) {
+    context.beginPath()
+    context.moveTo(longitude, 0)
+    context.lineTo(longitude, height)
+    context.stroke()
+  }
+  context.restore()
+
   LANDMASSES.forEach((landmass) => {
     drawLandPath(context, landmass, width, height)
-    context.fillStyle = 'rgba(180, 17, 38, 0.44)'
+    const land = context.createLinearGradient(0, 0, width, height)
+    land.addColorStop(0, 'rgba(255, 92, 109, 0.72)')
+    land.addColorStop(0.52, 'rgba(179, 18, 39, 0.57)')
+    land.addColorStop(1, 'rgba(96, 8, 24, 0.72)')
+    context.fillStyle = land
     context.fill()
-    context.lineWidth = 3
-    context.strokeStyle = 'rgba(255, 88, 104, 0.82)'
+    context.lineWidth = 2
+    context.strokeStyle = 'rgba(255, 162, 172, 0.94)'
     context.stroke()
     context.save()
     drawLandPath(context, landmass, width, height)
     context.clip()
-    context.strokeStyle = 'rgba(255, 82, 101, 0.15)'
+    context.strokeStyle = 'rgba(255, 209, 212, 0.14)'
     context.lineWidth = 1
-    for (let x = -height; x < width + height; x += 28) {
+    for (let x = -height; x < width + height; x += 32) {
       context.beginPath()
       context.moveTo(x, 0)
       context.lineTo(x + height * 0.36, height)
@@ -114,6 +136,11 @@ function createWorldTexture() {
     }
     context.restore()
   })
+  const vignette = context.createRadialGradient(width * 0.5, height * 0.5, height * 0.16, width * 0.5, height * 0.5, width * 0.66)
+  vignette.addColorStop(0.56, 'rgba(0, 0, 0, 0)')
+  vignette.addColorStop(1, 'rgba(0, 0, 0, 0.58)')
+  context.fillStyle = vignette
+  context.fillRect(0, 0, width, height)
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   // SphereGeometry's u=0 seam is at -90°. Shift a conventional world map
@@ -173,6 +200,20 @@ function disposeObject(root) {
 export default function GlobalPositionGlobe({ latitude, longitude, label, active = false }) {
   const containerRef = useRef(null)
   const runtimeRef = useRef(null)
+  const centerMarker = useCallback(() => {
+    const runtime = runtimeRef.current
+    if (!runtime || !hasCoordinates(latitude, longitude)) return
+
+    const localNormal = latLonVector(latitude, longitude, 1).normalize()
+    runtime.world.updateMatrixWorld(true)
+    const sceneNormal = localNormal.clone().transformDirection(runtime.world.matrixWorld)
+    const worldCenter = runtime.world.getWorldPosition(new THREE.Vector3())
+    runtime.camera.position
+      .copy(worldCenter.clone().add(sceneNormal.multiplyScalar(7.45)).add(new THREE.Vector3(0, 0.26, 0)))
+    runtime.controls.target.copy(worldCenter)
+    runtime.camera.lookAt(worldCenter)
+    runtime.controls.update()
+  }, [latitude, longitude])
 
   useEffect(() => {
     const container = containerRef.current
@@ -312,13 +353,16 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     const clock = new THREE.Clock()
     const render = () => {
       const elapsed = clock.getElapsedTime()
-      shell.rotation.y += 0.00035
-      shell.rotation.z = 0.1 + Math.sin(elapsed * 0.28) * 0.025
-      stars.rotation.y -= 0.00016
+      const reducedMotion = document.documentElement.classList.contains('ultron-reduced-motion')
+      if (!reducedMotion) {
+        shell.rotation.y += 0.00035
+        shell.rotation.z = 0.1 + Math.sin(elapsed * 0.28) * 0.025
+        stars.rotation.y -= 0.00016
+      }
       if (marker.visible) {
-        const wave = (Math.sin(elapsed * 3.2) + 1) * 0.5
+        const wave = reducedMotion ? 0.5 : (Math.sin(elapsed * 3.2) + 1) * 0.5
         rings.forEach((ring, index) => {
-          const phase = (elapsed * (2.3 + index * 0.4) + index * 1.8) % 1
+          const phase = reducedMotion ? 0.4 + index * 0.08 : (elapsed * (2.3 + index * 0.4) + index * 1.8) % 1
           ring.scale.setScalar(1 + phase * (0.9 + index * 0.36))
           ring.material.opacity = Math.max(0, 0.82 - phase * 0.82)
         })
@@ -384,8 +428,18 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
         <span>GLOBAL POSITION</span>
         <strong>{displayLabel}</strong>
       </div>
+      <button
+        type="button"
+        className="global-position-center"
+        onClick={centerMarker}
+        disabled={!valid}
+        aria-label="Center the selected position on the globe"
+      >
+        CENTER MARKER
+      </button>
       <div className="global-position-globe-readout global-position-globe-readout-bottom">
-        {active && valid ? 'POSITION LOCKED' : 'AWAITING POSITION LOCK'}
+        <i aria-hidden="true" />
+        {active && valid ? 'POSITION LOCKED · DRAG TO EXPLORE' : 'SEARCH OR USE YOUR DEVICE POSITION'}
       </div>
     </div>
   )

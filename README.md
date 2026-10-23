@@ -17,8 +17,8 @@
 </p>
 
 <p align="center">
-  <a href="#download-for-apple-silicon">Download</a> ·
-  <a href="#quick-start">Quick start</a> ·
+  <a href="#download-and-first-launch">Download</a> ·
+  <a href="#build-and-run-from-source-developers">Build from source</a> ·
   <a href="#what-is-inside">Features</a> ·
   <a href="#privacy-and-security">Privacy</a> ·
   <a href="#build-a-macos-app">Build</a> ·
@@ -30,20 +30,35 @@
 
 ---
 
-## Download for Apple Silicon
+## Download and first launch
 
-The first downloadable build targets **Macs with M1, M2, M3 and later**.
+The current public build targets **Macs with M1, M2, M3, M4 and later**.
+It is published as an Apple Silicon **final candidate / pre-release** so people
+can test the complete app before the notarized macOS release.
 
-[**Download the latest Apple Silicon preview →**](https://github.com/Lumacaonta/Ultron/releases)
+[**Download ULTRON for Apple Silicon →**](https://github.com/Lumacaonta/Ultron/releases)
 
-The preview includes a ZIP and SHA-256 checksum. It has passed source, security,
-archive and Apple Silicon package checks. Apple notarization requires the
-maintainer's Developer ID certificate, so macOS can ask for explicit first-run
-approval until the notarized release is published.
+Choose the newest **DMG** installer:
+
+1. Open the DMG and drag **ULTRON ai.app** to **Applications**.
+2. Open ULTRON from Applications and create a local account.
+3. The short first-run tour opens after sign-in. It introduces local AI,
+   Obsidian, email, devices, the Model Deck, memory and privacy controls.
+4. Complete only the integrations you want. You can reopen the tour at any
+   time from **Settings → Advanced → Open Quick Tour**.
+
+The downloaded app already includes its interface and local core. **You do not
+need Node.js, Python, Git or a `.env` file to use the DMG.** The ZIP remains
+available for portable installation, and each release includes SHA-256
+checksums.
+
+Apple notarization requires the maintainer's Developer ID certificate. Until a
+notarized build is published, macOS can ask for explicit first-run approval.
+The candidate is not presented as an Apple-notarized official release.
 
 | Platform | Status |
 | --- | --- |
-| **macOS Apple Silicon** | Public preview now; notarized release next. |
+| **macOS Apple Silicon** | Final-candidate DMG and ZIP available; notarized official release next. |
 | **macOS Intel** | Planned after Apple Silicon. |
 | **Windows** | Planned after Intel Mac. |
 | **Linux** | Planned after Windows. |
@@ -93,7 +108,10 @@ The packaged application serves its interface from `ultron://app`, starts the lo
 
 ---
 
-## Quick start
+## Build and run from source (developers)
+
+This section is for people who want to modify ULTRON or run it from a cloned
+repository. It is separate from installing the downloadable app above.
 
 ### 1. Install the prerequisites
 
@@ -105,8 +123,8 @@ The packaged application serves its interface from `ultron://app`, starts the lo
 ### 2. Clone and bootstrap
 
 ```bash
-git clone https://github.com/YOUR-ACCOUNT/ultron.git
-cd ultron
+git clone https://github.com/Lumacaonta/Ultron.git
+cd Ultron
 ./scripts/bootstrap.sh
 ```
 
@@ -134,13 +152,22 @@ Open the local Vite address printed in the second terminal.
 
 ---
 
-## First launch checklist
+## Set up an installed copy
 
-1. Create a **local ULTRON account** in the welcome screen.
-2. Open **Settings → Obsidian** and select a vault if you want local note browsing.
-3. Open **Devices** to select a 3D model and hand it to Cura.
-4. Use the **Vault** control in chat only when you want a command archived in `ULTRON/Neural Core.md`.
-5. Configure optional account-email verification or macOS Mail only when you need it.
+After you create a local account, ULTRON shows a six-step Quick Tour. It is
+designed to get a new installation running without a technical setup screen:
+
+1. Connect Ollama only if you want local AI replies.
+2. Choose an Obsidian vault only if you want ULTRON to browse local notes.
+3. Add Gmail through macOS Internet Accounts only if you want the Mail tools.
+4. Open Devices when you want to inspect a printer or send a selected model to Cura.
+5. Press **VAULT** in chat only when you want that command written to the
+   ULTRON note; ordinary chat is not silently archived.
+6. Set a Global Position only when you choose to search for a place or use the
+   device-location control.
+
+You can skip any step and finish it later in Settings. The guide is available
+again from **Settings → Advanced → Open Quick Tour**.
 
 <details>
 <summary><strong>Account email and password recovery</strong></summary>
@@ -154,9 +181,14 @@ The assistant's Mail integration is separate: it operates through the account al
 </details>
 
 <details>
-<summary><strong>Advanced local configuration</strong></summary>
+<summary><strong>Advanced configuration for source builds</strong></summary>
 
-Copy [`backend/.env.example`](backend/.env.example) to `backend/.env` and change only what you need.
+This section applies only when you cloned the repository and run ULTRON from
+source. It does **not** apply to the downloaded DMG: configure supported
+integrations there through the app's Settings screens instead.
+
+For a source build, copy [`backend/.env.example`](backend/.env.example) to
+`backend/.env` and change only what you need.
 
 | Setting | Use |
 | --- | --- |
@@ -164,7 +196,8 @@ Copy [`backend/.env.example`](backend/.env.example) to `backend/.env` and change
 | `ULTRON_MEMORY_MODEL` | Select the model used for memory extraction. |
 | `ULTRON_AUTH_REQUIRE_EMAIL_VERIFICATION` | Require email confirmation when SMTP is configured. |
 | `ULTRON_SMTP_*` | Enable encrypted verification and recovery email. |
-| `FISH_API_KEY`, `FISH_VOICE_ID` | Enable optional Fish Audio text-to-speech. |
+| `ULTRON_GEOCODER_URL` | Optional Nominatim-compatible HTTPS provider for the explicit Global Position search. |
+| `FISH_API_KEY`, `FISH_VOICE_ID` | Enable optional Fish Audio text-to-speech for a source build. |
 
 Never commit `backend/.env`, a vault, a database or an API key.
 
@@ -192,9 +225,16 @@ ULTRON stays local unless you enable a feature that needs an external service:
 
 - downloading or updating a model through Ollama;
 - optional SMTP verification or recovery mail;
-- optional Fish Audio text-to-speech;
+- voice input uses the Electron/browser `SpeechRecognition` service available
+  on the Mac. Depending on macOS and its speech-service configuration, that
+  service can use an operating-system or browser speech provider; review the
+  microphone and speech privacy settings on the Mac before using it;
+- optional Fish Audio text-to-speech, only when you configure Fish credentials.
+  Fish Audio is not used for microphone input;
 - web research;
-- typed place search through OpenStreetMap Nominatim;
+- typed place search through OpenStreetMap Nominatim, only after you choose
+  **Find on Globe**. The query is rate-limited and any result cache exists only
+  in memory while the local core is running;
 - weather refreshes through Open-Meteo.
 
 Read [SECURITY.md](SECURITY.md) for responsible disclosure guidance.
@@ -233,12 +273,13 @@ The release script rebuilds the interface, packages the Python core, checks the 
 
 ```bash
 backend/.venv/bin/python scripts/security-smoke-test.py
+backend/.venv/bin/python scripts/location-lookup-test.py
 python scripts/repository-hygiene.py
 npm --prefix frontend run build
 node --check desktop/main.cjs
 ```
 
-The security smoke test uses temporary data. It covers account login, logout, account isolation, memory confirmation, SMTP code delivery, API headers, CORS and the per-launch desktop channel.
+The security smoke tests use temporary data and no external location requests. They cover account login, logout, account isolation, memory confirmation, SMTP code delivery, API headers, CORS, the per-launch desktop channel, and the rate-limited Global Position lookup.
 
 ---
 

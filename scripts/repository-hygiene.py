@@ -42,7 +42,30 @@ DISALLOWED_PATH_PARTS = (
     ".backup",
     ".corrupted-",
 )
-DISALLOWED_SUFFIXES = (".db", ".sqlite", ".sqlite3", ".pem", ".p12", ".pfx")
+DISALLOWED_PATH_PREFIXES = (
+    ".ultron",
+    "backend/.ultron",
+    "backend/profiles/",
+    "backend/__pycache__/",
+    "desktop/release/",
+)
+DISALLOWED_SUFFIXES = (
+    ".db",
+    ".sqlite",
+    ".sqlite3",
+    ".pem",
+    ".p12",
+    ".pfx",
+    ".mobileprovision",
+    ".cer",
+    ".crt",
+    ".pyc",
+    ".log",
+    ".jsonl",
+    ".dmg",
+    ".zip",
+    ".ds_store",
+)
 SECRET_PATTERNS = (
     re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
     re.compile(r"\bgh[pousr]_[A-Za-z0-9_]{20,}\b"),
@@ -78,6 +101,10 @@ def is_disallowed_path(path: Path) -> bool:
         return False
     lower = relative.casefold()
     if lower.endswith("/.env") or path.name == ".env":
+        return True
+    if any(lower.startswith(prefix) for prefix in DISALLOWED_PATH_PREFIXES):
+        return True
+    if lower.endswith(".app") or ".app/" in lower:
         return True
     return (
         any(part in lower for part in DISALLOWED_PATH_PARTS)

@@ -46,4 +46,6 @@ jobs:
           npm --prefix frontend run build
 
       - name: Run isolated security smoke test
-        run: backend/.venv/bin/python scripts/security-smoke-test.py
+        run: |
+          backend/.venv/bin/python scripts/security-smoke-test.py
+          backend/.venv/bin/python scripts/location-lookup-test.py

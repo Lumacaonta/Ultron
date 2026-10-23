@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import GlobalPositionGlobe from './GlobalPositionGlobe.jsx'
 import { BACKEND_ORIGIN as BACKEND } from '../auth.js'
 
@@ -10,6 +10,72 @@ const SECTIONS = [
   ['skills', 'SKILLS'],
   ['advanced', 'ADVANCED'],
 ]
+
+const LOCATION_QUERY_MIN_LENGTH = 2
+
+function isCoordinate(value, minimum, maximum) {
+  const numeric = Number(value)
+  return Number.isFinite(numeric) && numeric >= minimum && numeric <= maximum
+}
+
+function hasValidCoordinates(latitude, longitude) {
+  return isCoordinate(latitude, -90, 90) && isCoordinate(longitude, -180, 180)
+}
+
+function normalizeLocation(candidate, source = 'search') {
+  const latitude = Number(candidate?.lat)
+  const longitude = Number(candidate?.lon)
+  if (!hasValidCoordinates(latitude, longitude)) return null
+
+  const label = String(candidate?.label || candidate?.shortLabel || 'Global position')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 320)
+  const shortLabel = String(candidate?.shortLabel || label || 'GLOBAL POSITION')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 120)
+
+  return {
+    label: label || 'Global position',
+    shortLabel: shortLabel || 'GLOBAL POSITION',
+    kind: String(candidate?.kind || (source === 'device' ? 'DEVICE POSITION' : source === 'coordinates' ? 'COORDINATES' : 'PLACE'))
+      .trim()
+      .slice(0, 80),
+    lat: Number(latitude.toFixed(6)),
+    lon: Number(longitude.toFixed(6)),
+    source,
+    accuracy: Number.isFinite(Number(candidate?.accuracy)) ? Number(candidate.accuracy) : null,
+  }
+}
+
+function parseCoordinateQuery(value) {
+  const match = String(value || '')
+    .trim()
+    .match(/^([+-]?\d{1,2}(?:\.\d+)?)\s*(?:,|;|\s)\s*([+-]?\d{1,3}(?:\.\d+)?)$/)
+
+  if (!match) return null
+
+  const location = normalizeLocation(
+    {
+      lat: match[1],
+      lon: match[2],
+      shortLabel: 'MANUAL POSITION',
+      label: 'Manual coordinates',
+      kind: 'COORDINATES',
+    },
+    'coordinates'
+  )
+
+  if (!location) return null
+
+  location.label = 'Manual coordinates · ' + location.lat.toFixed(5) + ', ' + location.lon.toFixed(5)
+  return location
+}
+
+function formatCoordinate(value) {
+  return isCoordinate(value, -180, 180) ? Number(value).toFixed(5) : '—'
+}
 
 function Toggle({ value, onChange, disabled = false, label }) {
   return (
@@ -85,6 +151,7 @@ export default function SettingsPage({
   setPreferences,
   backendOnline,
   printerStatus,
+  onOpenTutorial = () => {},
 }) {
   const [activeSection, setActiveSection] = useState('general')
   const [skills, setSkills] = useState([])
@@ -106,6 +173,7 @@ export default function SettingsPage({
   const [selectedLocation, setSelectedLocation] = useState(null)
   const [locationLoading, setLocationLoading] = useState(false)
   const [locationFeedback, setLocationFeedback] = useState('')
+  const locationRequestRef = useRef(null)
 
   const enabledSkills = useMemo(
     () => skills.filter(skill => skill.enabled).length,
@@ -117,19 +185,16 @@ export default function SettingsPage({
   )
   const globeLatitude = selectedLocation?.lat ?? weatherConfig?.lat ?? ''
   const globeLongitude = selectedLocation?.lon ?? weatherConfig?.lon ?? ''
-  const hasLockedPosition = [globeLatitude, globeLongitude].every(value => (
-    value !== '' && value !== null && value !== undefined
-  ))
+  const hasLockedPosition = hasValidCoordinates(globeLatitude, globeLongitude)
 
   useEffect(() => {
     void loadSkills()
   }, [])
 
-  useEffect(() => {
-    if (!selectedLocation && weatherConfig?.label && weatherConfig.label !== 'LOCAL AREA') {
-      setLocationQuery(weatherConfig.label)
-    }
-  }, [weatherConfig?.label, selectedLocation])
+  useEffect(() => () => {
+    locationRequestRef.current?.controller?.abort()
+    locationRequestRef.current = null
+  }, [])
 
   function setPreference(key, value) {
     setPreferences(current => ({ ...current, [key]: value }))
@@ -146,13 +211,28 @@ export default function SettingsPage({
   async function locatePosition() {
     const query = locationQuery.trim()
 
-    if (query.length < 2) {
-      setLocationFeedback('Enter a city, address or place name first.')
+    if (query.length < LOCATION_QUERY_MIN_LENGTH) {
+      setLocationFeedback('Enter a city, address, landmark, or coordinates first.')
       setLocationResults([])
       setSelectedLocation(null)
       return
     }
 
+    const coordinateLocation = parseCoordinateQuery(query)
+    if (coordinateLocation) {
+      locationRequestRef.current?.controller?.abort()
+      locationRequestRef.current = null
+      setLocationLoading(false)
+      setLocationResults([coordinateLocation])
+      setSelectedLocation(coordinateLocation)
+      setLocationFeedback('Coordinates ready. Confirm to save them to this local account.')
+      return
+    }
+
+    locationRequestRef.current?.controller?.abort()
+    const controller = new AbortController()
+    const request = { controller }
+    locationRequestRef.current = request
     setLocationLoading(true)
     setLocationFeedback('')
     setLocationResults([])
@@ -163,36 +243,108 @@ export default function SettingsPage({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query }),
+        signal: controller.signal,
       })
       const result = await readJson(response)
 
+      if (locationRequestRef.current !== request) return
       if (!response.ok || !result.ok) {
         throw new Error(result.detail || result.error || 'Location lookup unavailable.')
       }
 
-      const matches = Array.isArray(result.results) ? result.results : []
+      const matches = Array.isArray(result.results)
+        ? result.results
+          .map(item => normalizeLocation(item, 'search'))
+          .filter(Boolean)
+        : []
       setLocationResults(matches)
 
       if (!matches.length) {
-        setLocationFeedback('No global position matched this request.')
+        setLocationFeedback('No position matched that request. Try a more complete address or coordinates such as 45.4642, 9.1900.')
         return
       }
 
       setSelectedLocation(matches[0])
-      setLocationFeedback('Choose the exact match, then confirm the global position.')
+      setLocationFeedback('Review the suggested position, then confirm it to save it locally.')
     } catch (error) {
+      if (error?.name === 'AbortError') return
       setLocationFeedback(error?.message || 'Location lookup unavailable.')
     } finally {
-      setLocationLoading(false)
+      if (locationRequestRef.current === request) {
+        locationRequestRef.current = null
+        setLocationLoading(false)
+      }
     }
+  }
+
+  function useCurrentDevicePosition() {
+    if (!navigator.geolocation) {
+      setLocationFeedback('This device does not make its position available. Search an address or enter coordinates instead.')
+      return
+    }
+
+    locationRequestRef.current?.controller?.abort()
+    const request = { controller: null }
+    locationRequestRef.current = request
+    setLocationLoading(true)
+    setLocationFeedback('Requesting this device position…')
+    setLocationResults([])
+    setSelectedLocation(null)
+
+    navigator.geolocation.getCurrentPosition(
+      position => {
+        if (locationRequestRef.current !== request) return
+        const location = normalizeLocation(
+          {
+            lat: position.coords.latitude,
+            lon: position.coords.longitude,
+            shortLabel: 'THIS DEVICE',
+            label: 'Current device position',
+            kind: 'DEVICE POSITION',
+            accuracy: position.coords.accuracy,
+          },
+          'device'
+        )
+        locationRequestRef.current = null
+        setLocationLoading(false)
+
+        if (!location) {
+          setLocationFeedback('The device returned invalid coordinates. Search an address or enter coordinates instead.')
+          return
+        }
+
+        setLocationQuery(location.lat.toFixed(5) + ', ' + location.lon.toFixed(5))
+        setLocationResults([location])
+        setSelectedLocation(location)
+        setLocationFeedback('Device position ready. Confirm to save it to this local account.')
+      },
+      error => {
+        if (locationRequestRef.current !== request) return
+        locationRequestRef.current = null
+        setLocationLoading(false)
+        const messages = {
+          1: 'Location permission was denied. Search an address or enter coordinates instead.',
+          2: 'This device cannot determine its position right now. Search an address or enter coordinates instead.',
+          3: 'The location request timed out. Search an address or enter coordinates instead.',
+        }
+        setLocationFeedback(messages[error?.code] || 'Device location is unavailable. Search an address or enter coordinates instead.')
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 60000,
+      }
+    )
   }
 
   function confirmGlobalPosition() {
     if (!selectedLocation) return
 
     onSaveGlobalPosition?.(selectedLocation)
-    setLocationQuery(selectedLocation.label || selectedLocation.shortLabel || '')
-    setLocationFeedback('Global position locked locally. Weather telemetry is updating.')
+    setLocationQuery('')
+    setLocationResults([])
+    setSelectedLocation(null)
+    setLocationFeedback('Position saved to this local account. Weather telemetry is updating.')
   }
 
   async function loadSkills() {
@@ -489,7 +641,7 @@ export default function SettingsPage({
             />
           </SettingRow>
         </SettingsCard>
-        <SettingsCard title="Global position" kicker="WORLD CONTROL">
+        <SettingsCard title="Global position" kicker="PRIVATE LOCATION">
           <div className="global-position-layout">
             <GlobalPositionGlobe
               latitude={globeLatitude}
@@ -500,11 +652,15 @@ export default function SettingsPage({
 
             <div className="global-position-command">
               <div className="settings-field">
-                <label>LOCATION OR PRECISE ADDRESS</label>
+                <label>SEARCH OR COORDINATES</label>
                 <input
                   className="settings-input"
                   value={locationQuery}
+                  aria-describedby="global-position-help"
                   onChange={event => {
+                    locationRequestRef.current?.controller?.abort()
+                    locationRequestRef.current = null
+                    setLocationLoading(false)
                     setLocationQuery(event.target.value)
                     setLocationResults([])
                     setSelectedLocation(null)
@@ -516,20 +672,32 @@ export default function SettingsPage({
                       void locatePosition()
                     }
                   }}
-                  placeholder="City, street or landmark…"
+                  placeholder="City, address, landmark, or 45.4642, 9.1900"
                 />
               </div>
 
-              <button
-                type="button"
-                className="settings-primary global-position-locate"
-                onClick={() => void locatePosition()}
-                disabled={locationLoading || locationQuery.trim().length < 2}
-              >
-                {locationLoading ? 'LOCATING…' : 'LOCATE ON GLOBE'}
-              </button>
+              <div className="global-position-actions">
+                <button
+                  type="button"
+                  className="settings-primary global-position-locate"
+                  onClick={() => void locatePosition()}
+                  disabled={locationLoading || locationQuery.trim().length < LOCATION_QUERY_MIN_LENGTH}
+                >
+                  {locationLoading ? 'LOCATING…' : 'FIND ON GLOBE'}
+                </button>
+                <button
+                  type="button"
+                  className="settings-secondary global-position-device"
+                  onClick={useCurrentDevicePosition}
+                  disabled={locationLoading}
+                >
+                  USE MY DEVICE
+                </button>
+              </div>
 
-              <p className="global-position-privacy">Address lookup runs only when you press LOCATE ON GLOBE.</p>
+              <p id="global-position-help" className="global-position-privacy">
+                Enter coordinates directly to keep the lookup local. Address searches run only when you choose FIND ON GLOBE; your device position is requested only when you choose USE MY DEVICE.
+              </p>
 
               {locationResults.length > 0 && (
                 <div className="global-position-results" role="listbox" aria-label="Location matches">
@@ -537,15 +705,19 @@ export default function SettingsPage({
                     const selectedMatch = selectedLocation?.lat === result.lat && selectedLocation?.lon === result.lon
                     return (
                       <button
-                        key={`${result.lat}:${result.lon}:${result.label}`}
+                        key={result.lat + ':' + result.lon + ':' + result.label}
                         type="button"
                         className={selectedMatch ? 'active' : ''}
-                        aria-pressed={selectedMatch}
-                        onClick={() => setSelectedLocation(result)}
+                        role="option"
+                        aria-selected={selectedMatch}
+                        onClick={() => {
+                          setSelectedLocation(result)
+                          setLocationFeedback('Position selected. Confirm to save it to this local account.')
+                        }}
                       >
                         <span>{result.shortLabel || 'UNNAMED POSITION'}</span>
                         <small>{result.label}</small>
-                        <em>{result.kind || 'PLACE'}</em>
+                        <em>{(result.kind || 'PLACE') + ' · ' + formatCoordinate(result.lat) + ', ' + formatCoordinate(result.lon)}</em>
                       </button>
                     )
                   })}
@@ -553,24 +725,31 @@ export default function SettingsPage({
               )}
 
               <div className="position-coordinate-readout">
-                <span>LAT {Number(globeLatitude ?? 0).toFixed(5)}</span>
-                <span>LON {Number(globeLongitude ?? 0).toFixed(5)}</span>
-                <strong>{selectedLocation ? 'POSITION STAGED' : hasLockedPosition ? 'POSITION LOCKED' : 'NO POSITION LOCK'}</strong>
+                <span>LAT {formatCoordinate(globeLatitude)}</span>
+                <span>LON {formatCoordinate(globeLongitude)}</span>
+                <strong>{selectedLocation ? 'READY TO SAVE' : hasLockedPosition ? 'SAVED ON THIS DEVICE' : 'NO POSITION SAVED'}</strong>
+                {selectedLocation?.accuracy && (
+                  <em>DEVICE PRECISION ABOUT {Math.max(1, Math.round(selectedLocation.accuracy))} M</em>
+                )}
               </div>
 
               <div className="settings-actions">
                 {selectedLocation ? (
                   <button type="button" className="settings-primary" onClick={confirmGlobalPosition}>
-                    CONFIRM GLOBAL POSITION
+                    CONFIRM AND SAVE POSITION
                   </button>
                 ) : (
                   <button type="button" className="settings-primary" onClick={saveWeather} disabled={!hasLockedPosition}>
-                    REFRESH WEATHER LINK
+                    REFRESH WEATHER
                   </button>
                 )}
               </div>
 
-              {locationFeedback && <p className="global-position-feedback">{locationFeedback}</p>}
+              {locationFeedback && (
+                <p className="global-position-feedback" role="status" aria-live="polite">
+                  {locationFeedback}
+                </p>
+              )}
             </div>
           </div>
         </SettingsCard>
@@ -732,12 +911,19 @@ export default function SettingsPage({
 
   function renderAdvanced() {
     return (
-      <SettingsCard title="Local configuration" kicker="ADVANCED">
-        <p className="settings-note">Interface preferences are stored locally on this Mac. The Neural Core configuration is left unchanged.</p>
-        <div className="settings-actions">
-          <button type="button" className="settings-secondary" onClick={() => setPreferences({ scale: 100, motionEnabled: true, voiceEnabled: true })}>RESET INTERFACE</button>
-        </div>
-      </SettingsCard>
+      <>
+        <SettingsCard title="Local configuration" kicker="ADVANCED">
+          <p className="settings-note">Interface preferences are stored locally on this Mac. The Neural Core configuration is left unchanged.</p>
+          <div className="settings-actions">
+            <button type="button" className="settings-secondary" onClick={() => setPreferences({ scale: 100, motionEnabled: true, voiceEnabled: true })}>RESET INTERFACE</button>
+          </div>
+        </SettingsCard>
+        <SettingsCard title="Quick tour" kicker="GUIDED START">
+          <SettingRow title="First-launch guide" description="Review the setup for your local account, Ollama, Obsidian, Mail, devices and privacy whenever you need it.">
+            <button type="button" className="settings-primary" onClick={onOpenTutorial}>OPEN QUICK TOUR</button>
+          </SettingRow>
+        </SettingsCard>
+      </>
     )
   }
 

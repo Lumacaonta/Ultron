@@ -1,0 +1,536 @@
+.onboarding-overlay {
+  position: fixed;
+  z-index: 120;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: clamp(1rem, 3vw, 3rem);
+  isolation: isolate;
+  color: #f7f5f6;
+}
+
+.onboarding-backdrop {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(154, 11, 22, 0.24), transparent 35%),
+    rgba(1, 2, 4, 0.87);
+  backdrop-filter: blur(1.1rem) saturate(85%);
+  animation: onboarding-fade 260ms ease-out both;
+}
+
+.onboarding-dialog {
+  display: grid;
+  grid-template-columns: minmax(12.5rem, 20%) minmax(0, 1fr);
+  width: min(67rem, 100%);
+  min-height: min(38rem, calc(100dvh - 3rem));
+  overflow: hidden;
+  border: 1px solid rgba(255, 107, 99, 0.43);
+  border-radius: 0.5rem;
+  background:
+    linear-gradient(112deg, rgba(121, 6, 17, 0.35), transparent 32%),
+    linear-gradient(135deg, rgba(19, 8, 12, 0.98), rgba(5, 6, 9, 0.98) 58%, rgba(22, 9, 13, 0.96));
+  box-shadow:
+    0 2.2rem 7rem rgba(0, 0, 0, 0.65),
+    0 0 0 1px rgba(255, 255, 255, 0.045) inset,
+    0 0 4rem rgba(229, 24, 36, 0.13);
+  animation: onboarding-enter 340ms cubic-bezier(.2, .85, .2, 1) both;
+}
+
+.onboarding-rail {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.45rem 1.1rem 1rem;
+  border-right: 1px solid rgba(255, 104, 95, 0.18);
+  background:
+    linear-gradient(180deg, rgba(136, 8, 19, 0.34), transparent 28%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 0.36rem),
+    rgba(5, 6, 9, 0.76);
+}
+
+.onboarding-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.62rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.085);
+}
+
+.onboarding-brand img {
+  width: 2.1rem;
+  height: 2.1rem;
+  object-fit: contain;
+}
+
+.onboarding-brand span,
+.onboarding-brand strong,
+.onboarding-operator span,
+.onboarding-rail-footer,
+.onboarding-header > div > span,
+.onboarding-kicker,
+.onboarding-tip > span,
+.onboarding-footer > span {
+  font-family: var(--hud-mono);
+  font-size: 0.45rem;
+  font-weight: 760;
+  letter-spacing: 0.12em;
+}
+
+.onboarding-brand span {
+  display: block;
+  color: #fff;
+  font-size: 0.76rem;
+  letter-spacing: 0.17em;
+}
+
+.onboarding-brand strong {
+  display: block;
+  margin-top: 0.18rem;
+  color: #b98783;
+  font-size: 0.35rem;
+}
+
+.onboarding-operator {
+  min-width: 0;
+  margin: 1.15rem 0 0.86rem;
+  padding: 0.7rem;
+  border: 1px solid rgba(255, 108, 99, 0.2);
+  background: rgba(255, 255, 255, 0.024);
+}
+
+.onboarding-operator span {
+  display: block;
+  color: #a67d7a;
+  font-size: 0.36rem;
+}
+
+.onboarding-operator strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 0.34rem;
+  color: #fff4f3;
+  font-size: 0.61rem;
+  font-weight: 690;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.onboarding-steps {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.onboarding-steps button {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 2.54rem;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem;
+  border: 1px solid transparent;
+  border-radius: 0.16rem;
+  background: transparent;
+  color: #93878a;
+  font-family: var(--hud-mono);
+  font-size: 0.39rem;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-align: left;
+  transition: border-color 150ms ease, background 150ms ease, color 150ms ease;
+}
+
+.onboarding-steps button:hover {
+  border-color: rgba(255, 112, 104, 0.22);
+  background: rgba(255, 255, 255, 0.045);
+  color: #e7dddd;
+}
+
+.onboarding-steps i {
+  display: grid;
+  width: 1.36rem;
+  height: 1.36rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  color: #b6a5a6;
+  font-size: 0.4rem;
+  font-style: normal;
+}
+
+.onboarding-steps li.current button {
+  border-color: rgba(255, 101, 92, 0.54);
+  background: linear-gradient(90deg, rgba(255, 58, 49, 0.22), transparent);
+  color: #fff;
+}
+
+.onboarding-steps li.current i,
+.onboarding-steps li.complete i {
+  border-color: rgba(255, 103, 94, 0.74);
+  background: #e5302a;
+  color: #fff;
+  box-shadow: 0 0 0.8rem rgba(255, 44, 36, 0.38);
+}
+
+.onboarding-steps li.complete button {
+  color: #d7afac;
+}
+
+.onboarding-rail-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  color: #a5817e;
+  font-size: 0.36rem;
+}
+
+.onboarding-rail-footer i {
+  color: #ff4f48;
+  font-style: normal;
+  text-shadow: 0 0 0.75rem rgba(255, 60, 52, 0.8);
+  animation: onboarding-pulse 1.7s ease-in-out infinite;
+}
+
+.onboarding-content {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.onboarding-header {
+  display: flex;
+  min-height: 4.9rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.05rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 103, 94, 0.16);
+  background: linear-gradient(90deg, rgba(124, 6, 17, 0.2), transparent 68%);
+}
+
+.onboarding-header > div {
+  width: min(20rem, 56%);
+}
+
+.onboarding-header > div > span {
+  display: block;
+  color: #c29490;
+  font-size: 0.4rem;
+}
+
+.onboarding-progress-track {
+  height: 2px;
+  margin-top: 0.53rem;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.11);
+}
+
+.onboarding-progress-track i {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #d51e25, #ff7770);
+  box-shadow: 0 0 0.65rem rgba(255, 67, 58, 0.75);
+  transition: width 240ms ease;
+}
+
+.onboarding-skip,
+.onboarding-back,
+.onboarding-next,
+.onboarding-tip button {
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 0.15rem;
+  font-family: var(--hud-mono);
+  font-size: 0.43rem;
+  font-weight: 760;
+  letter-spacing: 0.08em;
+}
+
+.onboarding-skip,
+.onboarding-back {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.035);
+  color: #cfbfc0;
+}
+
+.onboarding-skip:hover,
+.onboarding-back:hover:not(:disabled) {
+  border-color: rgba(255, 106, 97, 0.48);
+  background: rgba(255, 69, 58, 0.08);
+  color: #fff;
+}
+
+.onboarding-main {
+  display: grid;
+  min-height: 0;
+  flex: 1 1 auto;
+  grid-template-columns: auto minmax(0, 1fr) minmax(14rem, 18rem);
+  align-content: center;
+  gap: clamp(1.15rem, 2.5vw, 2.5rem);
+  padding: clamp(1.5rem, 4vw, 3.25rem);
+  animation: onboarding-step-enter 250ms ease-out both;
+}
+
+.onboarding-signal-mark {
+  position: relative;
+  display: grid;
+  width: 5.4rem;
+  height: 5.4rem;
+  flex: 0 0 auto;
+  place-items: center;
+  align-self: start;
+  border: 1px solid rgba(255, 110, 100, 0.48);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 71, 63, 0.34), transparent 52%),
+    rgba(117, 5, 15, 0.22);
+  box-shadow: 0 0 2.1rem rgba(255, 45, 36, 0.16), inset 0 0 1.35rem rgba(255, 56, 46, 0.15);
+}
+
+.onboarding-signal-mark::before,
+.onboarding-signal-mark::after {
+  position: absolute;
+  border: 1px solid rgba(255, 116, 107, 0.24);
+  border-radius: 50%;
+  content: "";
+}
+
+.onboarding-signal-mark::before { inset: 0.48rem; }
+.onboarding-signal-mark::after { inset: -0.42rem; border-style: dashed; animation: onboarding-orbit 14s linear infinite; }
+
+.onboarding-signal-mark > span {
+  position: relative;
+  z-index: 1;
+  color: #fff6f5;
+  font-size: 2rem;
+  text-shadow: 0 0 1rem rgba(255, 69, 58, 0.76);
+}
+
+.onboarding-signal-mark > i {
+  position: absolute;
+  width: 0.4rem;
+  height: 0.4rem;
+  right: 0.25rem;
+  bottom: 0.38rem;
+  border-radius: 50%;
+  background: #ff5a52;
+  box-shadow: 0 0 0.85rem rgba(255, 70, 61, 0.9);
+  animation: onboarding-pulse 1.7s ease-in-out infinite;
+}
+
+.onboarding-copy {
+  min-width: 0;
+}
+
+.onboarding-kicker {
+  color: #e38f89;
+  font-size: 0.42rem;
+}
+
+.onboarding-copy h1 {
+  max-width: 31rem;
+  margin: 0.58rem 0 0;
+  color: #fff9f8;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Helvetica Neue", sans-serif;
+  font-size: clamp(1.5rem, 2.25vw, 2.25rem);
+  font-weight: 720;
+  letter-spacing: -0.045em;
+  line-height: 1.05;
+}
+
+.onboarding-copy p {
+  max-width: 33rem;
+  margin: 0.85rem 0 0;
+  color: #c5b7b8;
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.onboarding-checklist {
+  grid-column: 2;
+  display: grid;
+  gap: 0.48rem;
+  margin-top: 0.4rem;
+}
+
+.onboarding-checklist article {
+  display: grid;
+  grid-template-columns: 1.65rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+  padding: 0.56rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.onboarding-checklist article > span {
+  display: grid;
+  width: 1.35rem;
+  height: 1.35rem;
+  place-items: center;
+  border: 1px solid rgba(255, 107, 98, 0.43);
+  border-radius: 0.12rem;
+  background: rgba(255, 61, 53, 0.09);
+  color: #ffb1ac;
+  font-family: var(--hud-mono);
+  font-size: 0.36rem;
+  font-weight: 790;
+}
+
+.onboarding-checklist strong {
+  color: #f2eeee;
+  font-size: 0.68rem;
+  font-weight: 690;
+}
+
+.onboarding-checklist p {
+  margin: 0.2rem 0 0;
+  color: #9e9194;
+  font-size: 0.59rem;
+  line-height: 1.42;
+}
+
+.onboarding-tip {
+  align-self: stretch;
+  padding: 1rem;
+  border: 1px solid rgba(255, 109, 100, 0.23);
+  border-radius: 0.18rem;
+  background:
+    linear-gradient(135deg, rgba(128, 6, 17, 0.27), transparent 74%),
+    rgba(255, 255, 255, 0.025);
+}
+
+.onboarding-tip > span {
+  display: block;
+  color: #dc8e88;
+  font-size: 0.37rem;
+}
+
+.onboarding-tip p {
+  margin: 0.65rem 0 0;
+  color: #d2c1c2;
+  font-size: 0.62rem;
+  line-height: 1.55;
+}
+
+.onboarding-tip button {
+  width: 100%;
+  margin-top: 1rem;
+  border: 1px solid rgba(255, 118, 110, 0.57);
+  background: linear-gradient(135deg, #d43730, #a8151c);
+  color: #fff;
+}
+
+.onboarding-tip button:hover,
+.onboarding-next:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.onboarding-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid rgba(255, 105, 96, 0.16);
+  background: rgba(2, 3, 5, 0.5);
+}
+
+.onboarding-footer > span {
+  color: #9b8586;
+  font-size: 0.39rem;
+}
+
+.onboarding-footer > div {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.onboarding-next {
+  min-width: 7.8rem;
+  border: 1px solid rgba(255, 132, 124, 0.7);
+  background: linear-gradient(135deg, #f35b52, #cf2825);
+  color: #fff;
+  box-shadow: 0 0.55rem 1.35rem rgba(255, 55, 47, 0.17);
+}
+
+.onboarding-back:disabled {
+  border-color: rgba(255, 255, 255, 0.07);
+  color: #6d676a;
+  opacity: 0.55;
+}
+
+@keyframes onboarding-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes onboarding-enter {
+  from { opacity: 0; transform: translateY(0.85rem) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes onboarding-step-enter {
+  from { opacity: 0; transform: translateX(0.55rem); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes onboarding-pulse {
+  0%, 100% { opacity: 0.62; transform: scale(0.84); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes onboarding-orbit {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 70rem) {
+  .onboarding-main {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .onboarding-tip {
+    grid-column: 1 / -1;
+    margin-left: calc(5.4rem + clamp(1.15rem, 2.5vw, 2.5rem));
+  }
+}
+
+@media (max-width: 54rem) {
+  .onboarding-overlay { padding: 0.8rem; }
+  .onboarding-dialog { grid-template-columns: 10.5rem minmax(0, 1fr); }
+  .onboarding-rail { padding: 1rem 0.7rem; }
+  .onboarding-operator { padding: 0.56rem; }
+  .onboarding-steps button { padding: 0.38rem; }
+  .onboarding-steps button span { display: none; }
+  .onboarding-main { padding: 1.25rem; }
+  .onboarding-header, .onboarding-footer { padding-right: 1.15rem; padding-left: 1.15rem; }
+}
+
+@media (max-height: 46rem) {
+  .onboarding-dialog { min-height: 0; }
+  .onboarding-rail { padding-top: 0.85rem; }
+  .onboarding-operator { margin-top: 0.65rem; padding: 0.5rem; }
+  .onboarding-steps { gap: 0.12rem; }
+  .onboarding-steps button { min-height: 2.12rem; }
+  .onboarding-main { align-content: start; padding-top: 1.2rem; padding-bottom: 1.2rem; }
+  .onboarding-checklist article { padding: 0.34rem 0; }
+}
+
+.ultron-reduced-motion .onboarding-backdrop,
+.ultron-reduced-motion .onboarding-dialog,
+.ultron-reduced-motion .onboarding-main,
+.ultron-reduced-motion .onboarding-signal-mark::after,
+.ultron-reduced-motion .onboarding-signal-mark > i,
+.ultron-reduced-motion .onboarding-rail-footer i {
+  animation: none;
+}
