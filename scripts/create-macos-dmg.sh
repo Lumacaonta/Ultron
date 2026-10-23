@@ -59,13 +59,30 @@ ULTRON for macOS
 ULTRON keeps its account profiles, memory and optional integrations on this Mac.
 INSTALL_GUIDE
 
-hdiutil create \
-  -volname "$VOLUME_NAME" \
-  -srcfolder "$STAGING_ROOT" \
-  -ov \
-  -format UDZO \
-  -imagekey zlib-level=9 \
-  "$OUTPUT_PATH"
+create_disk_image() {
+  hdiutil create \
+    -volname "$VOLUME_NAME" \
+    -srcfolder "$STAGING_ROOT" \
+    -ov \
+    -format UDZO \
+    -imagekey zlib-level=9 \
+    "$OUTPUT_PATH"
+}
+
+# macOS can briefly keep a disk-image helper busy after another image finishes.
+# Retry the isolated image creation so a transient host condition cannot make a
+# clean source build look broken.
+for attempt in 1 2 3; do
+  rm -f -- "$OUTPUT_PATH"
+  if create_disk_image; then
+    break
+  fi
+  if [[ "$attempt" == 3 ]]; then
+    printf 'Could not create the DMG after %s attempts.\n' "$attempt" >&2
+    exit 1
+  fi
+  sleep "$attempt"
+done
 
 # The outer disk image is signed as well as the application it contains. A
 # preview uses an ad-hoc signature; a production build receives Developer ID.
