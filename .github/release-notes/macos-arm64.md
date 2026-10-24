@@ -15,7 +15,9 @@ Use the accompanying SHA256SUMS.txt file if you want to verify the download.
 
 - Electron desktop app and local FastAPI core;
 - local account profiles, explicit memory confirmation and security boundaries;
-- optional Ollama, Obsidian, Mail, Cura and 3D-printer integrations;
+- optional Ollama, Obsidian, Mail and local fabrication integrations;
+- Model Deck catalogue for selected local fabrication files, with safe native-app handoff and linked-app launching for printer setup;
+- explicit read-only printer profiles for Marlin-compatible USB, local OctoPrint and local Klipper/Moonraker;
 - a guided first launch that keeps optional services off until you choose them.
 
 The assets in this release are built and verified on an Apple Silicon macOS

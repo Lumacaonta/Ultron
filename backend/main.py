@@ -31,6 +31,8 @@ from auth import (
 )
 from skills_api import router as skills_router
 from skills_engine import execute_skill_for_message, get_skill
+from printer_service import close_all_printer_connections, router as printer_router
+from external_apps import router as external_apps_router
 from email_service import (
     EmailServiceError,
     compose_draft,
@@ -44,9 +46,6 @@ from email_service import (
 
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-
-import serial
-from serial.tools import list_ports
 
 from memory import (
     store_memories,
@@ -687,6 +686,15 @@ app = FastAPI(
 app.add_middleware(AuthContextMiddleware)
 app.include_router(auth_router)
 app.include_router(skills_router)
+app.include_router(printer_router)
+app.include_router(external_apps_router)
+
+
+@app.on_event("shutdown")
+def release_printer_connections() -> None:
+    """Release only explicitly opened serial links when the local core exits."""
+
+    close_all_printer_connections()
 
 app.add_middleware(
     CORSMiddleware,
@@ -859,15 +867,61 @@ class ModelPathRequest(BaseModel):
 # endpoints will touch it.  This keeps the local API from becoming a general
 # filesystem reader while still letting the 3D deck work with the model that the
 # person explicitly selected.
+# Files with ``previewable`` are parsed in the renderer.  The other common
+# fabrication/CAD/slicer formats still appear in the deck with their metadata
+# and can be passed to a chosen local application, but they are never blindly
+# decoded by the browser as if they were a Three.js mesh.  That keeps unknown
+# vendor containers useful without pretending that every format has a native
+# preview implementation.
 MODEL_FILE_TYPES = {
-    ".stl": {"format": "STL", "media_type": "model/stl"},
-    ".obj": {"format": "OBJ", "media_type": "text/plain"},
-    ".3mf": {"format": "3MF", "media_type": "model/3mf"},
-    ".amf": {"format": "AMF", "media_type": "application/amf+xml"},
-    ".ply": {"format": "PLY", "media_type": "application/octet-stream"},
-    ".gcode": {"format": "G-code", "media_type": "text/plain"},
+    ".stl": {"format": "STL", "media_type": "model/stl", "previewable": True},
+    ".obj": {"format": "OBJ", "media_type": "text/plain", "previewable": True},
+    ".3mf": {"format": "3MF", "media_type": "model/3mf", "previewable": True},
+    ".amf": {"format": "AMF", "media_type": "application/amf+xml", "previewable": True},
+    ".ply": {"format": "PLY", "media_type": "application/octet-stream", "previewable": True},
+    ".gcode": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".gco": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".gc": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".g": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".nc": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".tap": {"format": "G-code", "media_type": "text/plain", "previewable": True},
+    ".bgcode": {"format": "Binary G-code", "media_type": "application/octet-stream", "previewable": False},
+    ".step": {"format": "STEP CAD", "media_type": "application/step", "previewable": False},
+    ".stp": {"format": "STEP CAD", "media_type": "application/step", "previewable": False},
+    ".iges": {"format": "IGES CAD", "media_type": "application/iges", "previewable": False},
+    ".igs": {"format": "IGES CAD", "media_type": "application/iges", "previewable": False},
+    ".x3d": {"format": "X3D", "media_type": "model/x3d+xml", "previewable": False},
+    ".wrl": {"format": "VRML", "media_type": "model/vrml", "previewable": False},
+    ".dae": {"format": "COLLADA", "media_type": "model/vnd.collada+xml", "previewable": False},
+    ".glb": {"format": "glTF binary", "media_type": "model/gltf-binary", "previewable": True},
+    ".gltf": {"format": "glTF", "media_type": "model/gltf+json", "previewable": True},
+    ".fbx": {"format": "FBX", "media_type": "application/octet-stream", "previewable": False},
+    ".svg": {"format": "SVG", "media_type": "image/svg+xml", "previewable": False},
+    ".dxf": {"format": "DXF", "media_type": "application/dxf", "previewable": False},
+    ".scad": {"format": "OpenSCAD", "media_type": "text/plain", "previewable": False},
+    ".f3d": {"format": "Fusion design", "media_type": "application/octet-stream", "previewable": False},
+    ".fcstd": {"format": "FreeCAD project", "media_type": "application/octet-stream", "previewable": False},
+    ".skp": {"format": "SketchUp model", "media_type": "application/octet-stream", "previewable": False},
+    ".sldprt": {"format": "SolidWorks part", "media_type": "application/octet-stream", "previewable": False},
+    ".dwg": {"format": "DWG drawing", "media_type": "application/octet-stream", "previewable": False},
+    ".x3g": {"format": "MakerBot job", "media_type": "application/octet-stream", "previewable": False},
+    ".phz": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".bambu": {"format": "Bambu project", "media_type": "application/octet-stream", "previewable": False},
+    ".project": {"format": "Slicer project", "media_type": "application/octet-stream", "previewable": False},
+    ".sl1": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".ctb": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".photon": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".pwmo": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".pws": {"format": "Resin job", "media_type": "application/octet-stream", "previewable": False},
+    ".zip": {"format": "Model archive", "media_type": "application/zip", "previewable": False},
 }
-MODEL_MAX_BYTES = 150 * 1024 * 1024
+GENERIC_EXTERNAL_MODEL_TYPE = {
+    "format": "External fabrication asset",
+    "media_type": "application/octet-stream",
+    "previewable": False,
+}
+MODEL_MAX_BYTES = 512 * 1024 * 1024
+MODEL_PREVIEW_MAX_BYTES = 150 * 1024 * 1024
 MODEL_SELECTION_TTL_SECONDS = 6 * 60 * 60
 _selected_model_paths: dict[str, dict[str, float]] = {}
 
@@ -920,9 +974,6 @@ def _resolve_model_file(
 
     suffix = resolved.suffix.casefold()
 
-    if suffix not in MODEL_FILE_TYPES:
-        raise _model_error(415, "That file format is not supported by the 3D deck.")
-
     if not stat.S_ISREG(file_stat.st_mode):
         raise _model_error(400, "Choose a regular local model file.")
 
@@ -930,7 +981,7 @@ def _resolve_model_file(
         raise _model_error(400, "The selected 3D model is empty.")
 
     if file_stat.st_size > MODEL_MAX_BYTES:
-        raise _model_error(413, "Models larger than 150 MB cannot be opened here.")
+        raise _model_error(413, "Files larger than 512 MB cannot be catalogued here.")
 
     canonical_path = str(resolved)
 
@@ -1025,7 +1076,7 @@ def _model_telemetry(model_path: Path, file_size: int) -> dict:
             "zipSignature": prefix.startswith(b"PK\x03\x04"),
         })
 
-    elif suffix == ".gcode":
+    elif suffix in {".gcode", ".gco", ".gc", ".g", ".nc", ".tap"}:
         layer_match = re.search(r"^;LAYER_COUNT:(\d+)", text, re.MULTILINE)
         time_match = re.search(r"^;TIME:(\d+)", text, re.MULTILINE)
         facts.update({
@@ -1041,7 +1092,10 @@ def _model_metadata(model_path: Path) -> dict:
     """Return renderer-safe facts for the selected model card."""
 
     file_stat = model_path.stat()
-    descriptor = MODEL_FILE_TYPES[model_path.suffix.casefold()]
+    descriptor = MODEL_FILE_TYPES.get(
+        model_path.suffix.casefold(),
+        GENERIC_EXTERNAL_MODEL_TYPE,
+    )
     modified = datetime.fromtimestamp(
         file_stat.st_mtime,
         tz=timezone.utc,
@@ -1060,6 +1114,10 @@ def _model_metadata(model_path: Path) -> dict:
         "modifiedAt": modified,
         "modifiedUnix": int(file_stat.st_mtime),
         "selected": True,
+        "preview": {
+            "supported": bool(descriptor["previewable"]),
+            "reason": None if descriptor["previewable"] else "Open this asset in a connected local slicer or CAD application.",
+        },
         "telemetry": _model_telemetry(model_path, file_stat.st_size),
     }
 
@@ -1271,353 +1329,12 @@ def read_optional_sensors():
 
 
 # =========================================================
-# PRINTER USB AUTO-DETECTION
+# PRINTER INTEGRATIONS
 # =========================================================
-
-_printer = None
-_printer_port = None
-_printer_firmware = None
-
-_PRINTER_FIRMWARE_MARKERS = (
-    "firmware_name",
-    "marlin",
-    "klipper",
-    "repetier",
-    "smoothieware",
-    "elegoo",
-    "neptune",
-)
-
-
-def close_printer():
-    global _printer
-    global _printer_port
-    global _printer_firmware
-
-    try:
-        if _printer is not None:
-            _printer.close()
-    except Exception:
-        pass
-
-    _printer = None
-    _printer_port = None
-    _printer_firmware = None
-
-
-def detect_printer_port():
-    ports = list(
-        list_ports.comports()
-    )
-
-    scored = []
-
-    keywords = [
-        "elegoo",
-        "neptune",
-        "marlin",
-        "ch340",
-        "ch341",
-        "cp210",
-        "usb serial",
-        "usb-modem",
-        "usbmodem",
-        "usbserial",
-    ]
-
-    for port in ports:
-        device = str(
-            getattr(
-                port,
-                "device",
-                ""
-            )
-        )
-
-        description = str(
-            getattr(
-                port,
-                "description",
-                ""
-            )
-        )
-
-        manufacturer = str(
-            getattr(
-                port,
-                "manufacturer",
-                ""
-            )
-        )
-
-        product = str(
-            getattr(
-                port,
-                "product",
-                ""
-            )
-        )
-
-        text = (
-            f"{device} "
-            f"{description} "
-            f"{manufacturer} "
-            f"{product}"
-        ).lower()
-
-        if any(
-            ignored in text
-            for ignored in (
-                "bluetooth",
-                "debug-console",
-                "debug console",
-                "console",
-            )
-        ):
-            continue
-
-        score = 0
-
-        for keyword in keywords:
-            if keyword in text:
-                score += 10
-
-        if score > 0:
-            scored.append(
-                (
-                    score,
-                    device,
-                    description,
-                )
-            )
-
-    scored.sort(
-        reverse=True
-    )
-
-    return scored
-
-
-def _looks_like_printer_firmware(
-    response: str,
-) -> bool:
-    lowered = response.lower()
-    return any(
-        marker in lowered
-        for marker in _PRINTER_FIRMWARE_MARKERS
-    )
-
-
-def connect_printer():
-    global _printer
-    global _printer_port
-    global _printer_firmware
-
-    if _printer is not None:
-        try:
-            if _printer.is_open:
-                return True
-        except Exception:
-            pass
-
-        close_printer()
-
-    candidates = detect_printer_port()
-
-    if not candidates:
-        return False
-
-    for _, device, _ in candidates:
-        try:
-            printer = serial.Serial(
-                device,
-                115200,
-                timeout=0.25,
-                write_timeout=0.5,
-            )
-
-            time.sleep(0.25)
-
-            try:
-                printer.reset_input_buffer()
-            except Exception:
-                pass
-
-            printer.write(
-                b"\nM115\n"
-            )
-
-            deadline = time.monotonic() + 1.5
-            chunks = []
-
-            while time.monotonic() < deadline:
-                try:
-                    if printer.in_waiting > 0:
-                        chunks.append(
-                            printer.readline()
-                            .decode(
-                                "utf-8",
-                                errors="ignore",
-                            )
-                        )
-                        continue
-                except Exception:
-                    break
-
-                time.sleep(0.05)
-
-            response = "".join(chunks)
-
-            if not _looks_like_printer_firmware(response):
-                printer.close()
-                continue
-
-            _printer = printer
-            _printer_port = device
-            _printer_firmware = (
-                response.strip()
-                if response.strip()
-                else None
-            )
-
-            return True
-
-        except Exception:
-            continue
-
-    return False
-
-
-def printer_command(
-    command,
-    wait=0.25,
-):
-    if not connect_printer():
-        return ""
-
-    try:
-        _printer.reset_input_buffer()
-
-        _printer.write(
-            (
-                command.strip()
-                + "\n"
-            ).encode()
-        )
-
-        time.sleep(wait)
-
-        chunks = []
-
-        while (
-            _printer.in_waiting > 0
-        ):
-            try:
-                chunks.append(
-                    _printer.readline()
-                    .decode(
-                        "utf-8",
-                        errors="ignore",
-                    )
-                )
-            except Exception:
-                break
-
-        return "".join(chunks)
-
-    except Exception:
-        close_printer()
-        return ""
-
-
-def read_printer_status():
-    connected = connect_printer()
-
-    if not connected:
-        return {
-            "connected": False,
-            "port": None,
-            "firmware": None,
-            "status": "NOT CONNECTED",
-            "progress": None,
-            "raw": "",
-        }
-
-    raw = printer_command(
-        "M27",
-        wait=0.35,
-    )
-
-    progress = None
-    status = "CONNECTED"
-
-    lowered = raw.lower()
-
-    if (
-        "not sd printing" in lowered
-        or "not printing" in lowered
-    ):
-        status = "IDLE"
-
-    elif (
-        "sd printing" in lowered
-        or "printing" in lowered
-    ):
-        status = "PRINTING"
-
-    import re
-
-    match = re.search(
-        r"(\\d+)\\s*/\\s*(\\d+)",
-        raw,
-    )
-
-    if match:
-        current = int(
-            match.group(1)
-        )
-
-        total = int(
-            match.group(2)
-        )
-
-        if total > 0:
-            progress = round(
-                (
-                    current /
-                    total
-                ) * 100,
-                1,
-            )
-
-    return {
-        "connected": True,
-        "port": _printer_port,
-        "firmware": _printer_firmware,
-        "status": status,
-        "progress": progress,
-        "raw": raw[-1000:],
-    }
-
-
-@app.get("/api/printer/status")
-def printer_status():
-    return read_printer_status()
-
-
-@app.get("/api/printer/ports")
-def printer_ports():
-    return {
-        "ports": [
-            {
-                "device": device,
-                "description": description,
-                "score": score,
-            }
-            for score, device, description
-            in detect_printer_port()
-        ]
-    }
+#
+# Printer routes are supplied by printer_service.  Unlike the original
+# auto-detection block, GET /api/printer/status never opens serial devices or
+# scans a LAN.  A signed-in operator explicitly saves and connects a profile.
 
 
 _CURA_APP_PATHS = (
@@ -1685,11 +1402,17 @@ def _open_model_in_cura(model_path: Path) -> dict:
 
 @app.post("/api/models/pick")
 def pick_local_model():
-    """Open the native macOS picker and register one local 3D model."""
+    """Open the native picker and register one local fabrication asset.
+
+    Restricting Apple's picker to a short list made valid slicer and CAD files
+    invisible. The picker now lets the operator select a regular local file;
+    ULTRON marks formats it can render itself and safely hands all other
+    selected assets to a user-connected local application.
+    """
 
     chooser_script = """
 try
-    set chosenModel to choose file with prompt "Seleziona un modello 3D per ULTRON" of type {"stl", "obj", "3mf", "amf", "ply", "gcode"}
+    set chosenModel to choose file with prompt "Seleziona un file 3D o di stampa per ULTRON"
     return POSIX path of chosenModel
 on error number -128
     return ""
@@ -1733,7 +1456,22 @@ def read_selected_model(path: str):
     """Stream raw bytes only for a current model-picker selection."""
 
     model_path = _resolve_model_file(path)
-    descriptor = MODEL_FILE_TYPES[model_path.suffix.casefold()]
+    descriptor = MODEL_FILE_TYPES.get(
+        model_path.suffix.casefold(),
+        GENERIC_EXTERNAL_MODEL_TYPE,
+    )
+
+    if not descriptor["previewable"]:
+        raise _model_error(
+            415,
+            "This asset is available in ULTRON but needs a connected local slicer or CAD application to open.",
+        )
+
+    if model_path.stat().st_size > MODEL_PREVIEW_MAX_BYTES:
+        raise _model_error(
+            413,
+            "This asset is catalogued in ULTRON but is too large for an in-app preview. Open it in a connected local application.",
+        )
 
     return FileResponse(
         path=model_path,

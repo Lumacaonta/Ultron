@@ -74,15 +74,16 @@ Read [platform support](docs/PLATFORM_SUPPORT.md) for the exact release status.
 | **Agent Console** | Talk to a local Ollama model, keep the recent conversation context, use voice input, prepare memory entries and send reviewed actions. |
 | **Neural Core** | Explore a live 3D relationship graph for local knowledge, devices, vault content and saved memory. |
 | **Memory Vault** | Store only confirmed memories; browse an Obsidian vault without importing it automatically. |
-| **Model Deck** | Inspect STL, OBJ, 3MF, AMF, PLY and G-code files, then reveal them in Finder or open a selected model in UltiMaker Cura. |
-| **Device Control** | See local system activity, network status, serial ports and supported 3D printer information. |
+| **Model Deck** | Catalog any selected local fabrication file. Inspect STL, OBJ, 3MF, AMF, PLY, GLB, glTF and G-code in-app; hand CAD, slicer and other native formats to Cura, Bambu Studio, OrcaSlicer, PrusaSlicer or a local macOS app you choose. Start a linked app from the deck to use its own printer setup. |
+| **Device Control** | See local system activity and configure one explicit printer profile: Marlin-compatible USB, OctoPrint on local Wi-Fi/Ethernet, or Klipper/Moonraker on local Wi-Fi/Ethernet. |
 | **Accounts and Mail** | Create local email/password accounts with isolated ULTRON profiles; optionally configure SMTP codes and macOS Mail actions. |
 
 ### Local by default
 
 - **Ollama** powers chat and memory extraction on your machine.
 - **Obsidian** remains your vault. ULTRON reads it on demand and writes only after an explicit action.
-- **Cura, Finder, Mail and serial devices** are called through the current macOS user account.
+- **Cura, Bambu Studio, OrcaSlicer, PrusaSlicer, Finder, Mail and serial devices** are called through the current macOS user account only after an explicit action.
+- **Printer telemetry** is read-only. ULTRON does not upload jobs, move axes, set temperatures or discover devices across your network.
 - **No ULTRON cloud account, cloud sync or telemetry pipeline** is included.
 
 ---
@@ -96,7 +97,7 @@ flowchart LR
     C --> D[Ollama<br/>127.0.0.1]
     C --> E[Account profiles<br/>local private-profile storage]
     C --> F[Obsidian vault]
-    C --> G[Mail · Cura · Finder · Devices]
+    C --> G[Mail · Model apps · Finder · Devices]
 
     classDef red fill:#240609,stroke:#ff3b3b,color:#ffffff,stroke-width:2px;
     classDef dark fill:#0b0b0d,stroke:#5c1a20,color:#ffffff;
@@ -117,7 +118,7 @@ repository. It is separate from installing the downloadable app above.
 
 | Required | Optional integrations |
 | --- | --- |
-| macOS · Node.js 22.13+ · Python 3.11+ · Git | [Obsidian](https://obsidian.md/download), [UltiMaker Cura](https://ultimaker.com/software/ultimaker-cura/), macOS Mail, SMTP, [Fish Audio](https://fish.audio/) |
+| macOS · Node.js 22.13+ · Python 3.11+ · Git | [Obsidian](https://obsidian.md/download), [UltiMaker Cura](https://ultimaker.com/software/ultimaker-cura/), Bambu Studio, OrcaSlicer, PrusaSlicer, macOS Mail, SMTP, [Fish Audio](https://fish.audio/) |
 | [Ollama](https://ollama.com/download) | A local Obsidian vault and a supported 3D printer |
 
 ### 2. Clone and bootstrap
@@ -160,7 +161,7 @@ designed to get a new installation running without a technical setup screen:
 1. Connect Ollama only if you want local AI replies.
 2. Choose an Obsidian vault only if you want ULTRON to browse local notes.
 3. Add Gmail through macOS Internet Accounts only if you want the Mail tools.
-4. Open Devices when you want to inspect a printer or send a selected model to Cura.
+4. Open Devices and choose a printer profile when you want read-only status through USB, OctoPrint or Moonraker. Use Model Deck to choose a file, open a linked local app for its own printer setup, or pass the file to Cura, Bambu Studio, OrcaSlicer, PrusaSlicer or another local app.
 5. Press **VAULT** in chat only when you want that command written to the
    ULTRON note; ordinary chat is not silently archived.
 6. Set a Global Position only when you choose to search for a place or use the
@@ -215,6 +216,7 @@ Never commit `backend/.env`, a vault, a database or an API key.
 | **Browser isolation** | Electron uses context isolation, sandboxing, disabled Node integration, strict navigation controls and an app-owned origin. |
 | **Explicit memory** | Normal chat does not silently save a memory. The person confirms a proposal before it is committed. |
 | **Release hygiene** | Automated checks reject likely credentials, private paths, databases, backups and generated artifacts from tracked source. |
+| **Fabrication boundary** | Printer profiles are account-scoped; saved network targets must resolve to local addresses; secrets use macOS Keychain when available and never appear in API responses or JSON profile files. |
 
 > [!NOTE]
 > ULTRON profiles are separate accounts within one macOS user account. They do not protect files from somebody who can already use that same macOS account. Use separate macOS accounts for separate people.
@@ -236,6 +238,11 @@ ULTRON stays local unless you enable a feature that needs an external service:
   **Find on Globe**. The query is rate-limited and any result cache exists only
   in memory while the local core is running;
 - weather refreshes through Open-Meteo.
+
+Printer profiles are not an external cloud request: ULTRON accepts only the
+single local USB port or private LAN address you explicitly select. Bambu Lab
+file handoff is available through Bambu Studio; Bambu printer pairing and
+printer control remain inside Bambu Studio.
 
 Read [SECURITY.md](SECURITY.md) for responsible disclosure guidance.
 
@@ -274,12 +281,13 @@ The release script rebuilds the interface, packages the Python core, checks the 
 ```bash
 backend/.venv/bin/python scripts/security-smoke-test.py
 backend/.venv/bin/python scripts/location-lookup-test.py
+backend/.venv/bin/python scripts/fabrication-integration-test.py
 python scripts/repository-hygiene.py
 npm --prefix frontend run build
 node --check desktop/main.cjs
 ```
 
-The security smoke tests use temporary data and no external location requests. They cover account login, logout, account isolation, memory confirmation, SMTP code delivery, API headers, CORS, the per-launch desktop channel, and the rate-limited Global Position lookup.
+The checks use temporary data and no real account, model, printer, slicer or LAN target. They cover account login, logout, account isolation, memory confirmation, SMTP code delivery, API headers, CORS, the per-launch desktop channel, Global Position lookup, model selection boundaries, native-app handoff boundaries, local printer URL validation and private credential storage.
 
 ---
 

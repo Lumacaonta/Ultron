@@ -93,10 +93,13 @@ jobs:
       - name: Verify source and security boundaries
         run: |
           python scripts/repository-hygiene.py
+          backend/.venv/bin/python -m py_compile backend/auth.py backend/email_service.py backend/external_apps.py backend/launcher.py backend/main.py backend/memory.py backend/printer_service.py backend/research.py backend/skills_api.py backend/skills_engine.py
           backend/.venv/bin/python scripts/security-smoke-test.py
           backend/.venv/bin/python scripts/location-lookup-test.py
+          backend/.venv/bin/python scripts/fabrication-integration-test.py
           node --check desktop/main.cjs
           node --check desktop/forge.config.cjs
+          npm --prefix frontend run lint
 
       - name: Build, verify and archive
         env:

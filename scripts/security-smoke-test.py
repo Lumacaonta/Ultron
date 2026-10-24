@@ -264,11 +264,97 @@ def _check_backend(temp_root: Path) -> None:
         token_a = first["token"]
         account_a_headers = {**channel, "Authorization": f"Bearer {token_a}"}
 
+        # Fabrication integrations are account-scoped, local-only and do not
+        # turn a simple status request into a device or LAN scan.
+        status, _headers, printer_profiles = _api(
+            port,
+            "GET",
+            "/api/printer/profiles",
+            headers=account_a_headers,
+        )
+        assert status == 200
+        assert any(item.get("id") == "marlin-usb" for item in printer_profiles.get("profiles", []))
+        assert any(
+            item.get("id") == "bambu-lan" and item.get("available") is False
+            for item in printer_profiles.get("profiles", [])
+        )
+
+        status, _headers, initial_printer = _api(
+            port,
+            "GET",
+            "/api/printer/config",
+            headers=account_a_headers,
+        )
+        assert status == 200 and not initial_printer.get("configured")
+        assert "credential" not in initial_printer
+
+        status, _headers, public_url = _api(
+            port,
+            "PUT",
+            "/api/printer/config",
+            payload={
+                "profileId": "octoprint-local",
+                "baseUrl": "http://8.8.8.8:80",
+                "monitoring": True,
+            },
+            headers=account_a_headers,
+        )
+        assert status == 422 and "public" in str(public_url).casefold()
+
+        status, _headers, saved_printer = _api(
+            port,
+            "PUT",
+            "/api/printer/config",
+            payload={
+                "profileId": "octoprint-local",
+                "baseUrl": "http://127.0.0.1:5000/",
+                "monitoring": True,
+            },
+            headers=account_a_headers,
+        )
+        assert status == 200 and saved_printer.get("ok")
+        assert saved_printer.get("config", {}).get("baseUrl") == "http://127.0.0.1:5000"
+        assert "credential" not in saved_printer.get("config", {})
+
+        status, _headers, inactive_printer = _api(
+            port,
+            "GET",
+            "/api/printer/status",
+            headers=account_a_headers,
+        )
+        assert status == 200 and inactive_printer.get("connected") is False
+        assert inactive_printer.get("status") == "NOT CONNECTED"
+
+        status, _headers, external_apps = _api(
+            port,
+            "GET",
+            "/api/models/apps",
+            headers=account_a_headers,
+        )
+        assert status == 200 and isinstance(external_apps.get("apps"), list)
+        assert all("path" not in item for item in external_apps["apps"])
+
+        unselected_asset = temp_root / "unselected-asset.step"
+        unselected_asset.write_text("ISO-10303-21;", encoding="utf-8")
+        status, _headers, handoff_denied = _api(
+            port,
+            "POST",
+            "/api/models/open-external",
+            payload={"path": str(unselected_asset), "appId": "known-cura"},
+            headers=account_a_headers,
+        )
+        assert status == 403 and "3d deck" in str(handoff_denied).casefold(), (
+            status,
+            handoff_denied,
+        )
+
         _assert_private_mode(app_data)
         _assert_private_mode(app_data / "accounts.db")
         assert token_a.encode("utf-8") not in (app_data / "accounts.db").read_bytes()
 
         status, _headers, _payload = _api(port, "GET", "/api/system", headers=channel)
+        assert status == 401
+        status, _headers, _payload = _api(port, "GET", "/api/printer/ports", headers=channel)
         assert status == 401
         status, _headers, _payload = _api(
             port,
@@ -337,6 +423,22 @@ def _check_backend(temp_root: Path) -> None:
         )
         assert status == 201 and second.get("token")
         account_b_headers = {**channel, "Authorization": f"Bearer {second['token']}"}
+
+        status, _headers, b_printer = _api(
+            port,
+            "GET",
+            "/api/printer/config",
+            headers=account_b_headers,
+        )
+        assert status == 200 and not b_printer.get("configured")
+
+        status, _headers, b_apps = _api(
+            port,
+            "GET",
+            "/api/models/apps",
+            headers=account_b_headers,
+        )
+        assert status == 200 and all(not item.get("configured") for item in b_apps.get("apps", []))
 
         status, _headers, b_memory = _api(
             port,

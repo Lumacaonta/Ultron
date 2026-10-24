@@ -7,13 +7,40 @@ import { ThreeMFLoader } from 'three/examples/jsm/loaders/3MFLoader.js'
 import { AMFLoader } from 'three/examples/jsm/loaders/AMFLoader.js'
 import { PLYLoader } from 'three/examples/jsm/loaders/PLYLoader.js'
 import { GCodeLoader } from 'three/examples/jsm/loaders/GCodeLoader.js'
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { LineSegments2 } from 'three/examples/jsm/lines/LineSegments2.js'
 import { LineSegmentsGeometry } from 'three/examples/jsm/lines/LineSegmentsGeometry.js'
 import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
 import { BACKEND_ORIGIN as BACKEND } from '../auth.js'
 import './ModelDeckPage.css'
 
-const SUPPORTED_FORMATS = new Set(['stl', 'obj', '3mf', 'amf', 'ply', 'gcode'])
+/*
+ * The Core owns the final allow-list because it controls the native picker and
+ * the bounded file endpoint.  This registry only describes what this browser
+ * build can render itself.  A format returned by the Core must never disappear
+ * merely because Three.js has no safe local decoder for it.
+ */
+const RENDERABLE_FORMATS = new Set([
+  'stl', 'obj', '3mf', 'amf', 'ply', 'gcode', 'gco', 'g', 'gc', 'nc', 'tap', 'glb', 'gltf',
+])
+
+const FORMAT_FAMILIES = [
+  {
+    label: 'LIVE INSPECTION',
+    detail: 'Interactive local preview',
+    formats: ['STL', 'OBJ', '3MF', 'AMF', 'PLY', 'GLB', 'GLTF', 'G-CODE'],
+  },
+  {
+    label: 'CAD / PROJECT',
+    detail: 'Catalogued, then hand off to a selected app',
+    formats: ['STEP', 'IGES', 'F3D', 'FCSTD', 'SKP', 'SLDPRT', 'DWG', 'DXF'],
+  },
+  {
+    label: 'SLICER / MACHINE',
+    detail: 'Catalogued with file facts and safe app handoff',
+    formats: ['GCO', 'BGCODE', 'X3G', 'CTB', 'PHZ', 'UVTOOLS', 'PROJECT'],
+  },
+]
 const MAX_EXTRUSION_SEGMENTS = 240000
 const MAX_TRAVEL_SEGMENTS = 42000
 
@@ -47,13 +74,6 @@ function formatTriangles(value) {
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(number)
 }
 
-function formatVolume(value) {
-  const number = Number(value)
-  if (!Number.isFinite(number) || number <= 0) return '—'
-  if (number >= 1000) return `${(number / 1000).toFixed(1)} cm³`
-  return `${number.toFixed(0)} mm³`
-}
-
 function responseMessage(payload, fallback) {
   if (typeof payload === 'string') return payload
   return payload?.detail || payload?.error || payload?.message || fallback
@@ -74,6 +94,50 @@ function normalizeAsset(payload) {
     extension,
     size: Number.isFinite(Number(size)) ? Number(size) : null,
     modified: source.modified || source.modified_at || source.mtime || null,
+    format: source.format || source.format_name || extension.toUpperCase(),
+    mediaType: source.mediaType || source.media_type || '',
+    telemetry: source.telemetry && typeof source.telemetry === 'object' ? source.telemetry : null,
+    preview: source.preview && typeof source.preview === 'object' ? source.preview : null,
+  }
+}
+
+function previewCapability(asset) {
+  if (!asset) return { mode: 'empty', reason: '' }
+
+  const localParserAvailable = RENDERABLE_FORMATS.has(asset.extension)
+  const declaredSupported = asset.preview?.supported
+
+  if (declaredSupported === false) {
+    return {
+      mode: 'metadata',
+      reason: asset.preview?.reason || 'This file is catalogued locally and can be handed to compatible software.',
+    }
+  }
+
+  if (!localParserAvailable) {
+    return {
+      mode: 'metadata',
+      reason: asset.preview?.reason || 'This format is available in the catalog. Open it in a selected application for its native view.',
+    }
+  }
+
+  return { mode: 'render', reason: '' }
+}
+
+function normalizeExternalApp(value) {
+  if (!value || typeof value !== 'object') return null
+  const id = String(value.id || value.path || value.name || '').trim()
+  const name = String(value.name || value.label || value.id || 'External application').trim()
+  if (!id || !name) return null
+
+  return {
+    id,
+    name,
+    kind: String(value.kind || 'External application'),
+    available: value.available !== false,
+    configured: value.configured !== false,
+    launchesFiles: value.launchesFiles !== false,
+    supports: Array.isArray(value.supports) ? value.supports.filter(Boolean).map(item => String(item).toUpperCase()) : [],
   }
 }
 
@@ -313,7 +377,7 @@ function estimateModelStats(model) {
   }
 }
 
-function parseModel(extension, arrayBuffer) {
+async function parseModel(extension, arrayBuffer) {
   if (extension === 'stl') {
     const geometry = new STLLoader().parse(arrayBuffer)
     geometry.computeVertexNormals()
@@ -338,7 +402,7 @@ function parseModel(extension, arrayBuffer) {
     return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial())
   }
 
-  if (extension === 'gcode') {
+  if (['gcode', 'gco', 'g', 'gc', 'nc', 'tap'].includes(extension)) {
     const source = new TextDecoder().decode(arrayBuffer)
     const toolpath = buildGcodeToolpathModel(source)
     if (toolpath) return toolpath
@@ -350,7 +414,19 @@ function parseModel(extension, arrayBuffer) {
     return loaded
   }
 
-  throw new Error(`Unsupported format: .${extension || 'unknown'}`)
+  if (extension === 'glb' || extension === 'gltf') {
+    return new Promise((resolve, reject) => {
+      const loader = new GLTFLoader()
+      loader.parse(
+        arrayBuffer,
+        '',
+        result => resolve(result.scene || result.scenes?.[0] || new THREE.Group()),
+        reject,
+      )
+    })
+  }
+
+  throw new Error(`This build does not include a local renderer for .${extension || 'unknown'}.`)
 }
 
 function disposeObject(root) {
@@ -456,7 +532,7 @@ function makePreviewModel(source) {
   return root
 }
 
-function ModelViewport({ model, loading, resetToken }) {
+function ModelViewport({ model, asset, loading, preview, resetToken }) {
   const mountRef = useRef(null)
 
   useEffect(() => {
@@ -587,9 +663,13 @@ function ModelViewport({ model, loading, resetToken }) {
       <div className="model-deck-viewport-corners" aria-hidden="true"><i /><i /><i /><i /></div>
       {!model && !loading && (
         <div className="model-deck-empty-state">
-          <span>FABRICATION ASSET BAY</span>
-          <strong>AWAITING MODEL</strong>
-          <small>SELECT STL, OBJ, 3MF, AMF, PLY OR G-CODE TO INITIALIZE THE PREVIEW.</small>
+          <span>{asset ? 'LOCAL ASSET CATALOGUE' : 'FABRICATION ASSET BAY'}</span>
+          <strong>{asset ? 'METADATA VIEW ACTIVE' : 'AWAITING MODEL'}</strong>
+          <small>
+            {asset
+              ? preview?.reason || 'This file is ready for a compatible local application.'
+              : 'SELECT A MODEL OR TOOLPATH TO INITIALIZE LOCAL INSPECTION.'}
+          </small>
         </div>
       )}
       {loading && <div className="model-deck-loading">DECODING GEOMETRY<span /></div>}
@@ -621,6 +701,32 @@ function ActionButton({ children, disabled, onClick, tone = 'secondary', title }
   )
 }
 
+function FormatCatalogue() {
+  return (
+    <section className="model-deck-format-panel" aria-label="Supported fabrication file families">
+      <div className="model-deck-section-title"><span>ASSET CATALOGUE</span><b>LOCAL</b></div>
+      <p>Files remain visible even when their native preview belongs to a CAD or slicer application.</p>
+      <div className="model-deck-format-groups">
+        {FORMAT_FAMILIES.map(group => (
+          <div className="model-deck-format-group" key={group.label}>
+            <div><strong>{group.label}</strong><small>{group.detail}</small></div>
+            <ul>
+              {group.formats.map(format => <li key={format}>{format}</li>)}
+            </ul>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function AssetPreviewState({ asset, model, preview }) {
+  if (!asset) return 'AWAITING INPUT'
+  if (model) return 'LIVE PREVIEW READY'
+  if (preview?.mode === 'failed') return 'PREVIEW UNAVAILABLE'
+  return 'METADATA VIEW ACTIVE'
+}
+
 /**
  * Isolated fabrication console. The parent decides where the page appears and
  * may provide native Cura launching through `onOpenCura`; all file work stays
@@ -640,15 +746,68 @@ export default function ModelDeckPage({
   const [notice, setNotice] = useState('SELECT A FABRICATION ASSET TO BEGIN')
   const [error, setError] = useState('')
   const [resetToken, setResetToken] = useState(0)
+  const [preview, setPreview] = useState({ mode: 'empty', reason: '' })
+  const [externalApps, setExternalApps] = useState([])
+  const [appsLoading, setAppsLoading] = useState(false)
+  const [appsError, setAppsError] = useState('')
+  const [selectedAppId, setSelectedAppId] = useState('')
+  const [softwareLabel, setSoftwareLabel] = useState('')
 
   useEffect(() => () => disposeObject(model), [model])
 
   const printerOnline = Boolean(printerStatus?.connected)
   const printerState = printerStatus?.status || (printerOnline ? 'LINKED' : 'STANDBY')
   const canSelect = Boolean(backendOnline) && !loading
+  const selectedApp = externalApps.find(app => app.id === selectedAppId) || null
+  const printerTransport = typeof printerStatus?.transport === 'string'
+    ? printerStatus.transport
+    : typeof printerStatus?.connectionType === 'string'
+      ? printerStatus.connectionType
+      : printerStatus?.port || 'USB / WI-FI SETUP IN DEVICES'
+
+  const loadExternalApps = useCallback(async () => {
+    if (!backendOnline) {
+      setExternalApps([])
+      setSelectedAppId('')
+      setAppsError('Connect the local Core to manage external applications.')
+      return []
+    }
+
+    setAppsLoading(true)
+    setAppsError('')
+    try {
+      const response = await fetch(`${BACKEND}/api/models/apps`, { cache: 'no-store' })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(responseMessage(payload, 'The external software bridge is unavailable.'))
+      const nextApps = (Array.isArray(payload?.apps) ? payload.apps : [])
+        .map(normalizeExternalApp)
+        .filter(Boolean)
+      setExternalApps(nextApps)
+      setSelectedAppId(current => {
+        if (current && nextApps.some(app => app.id === current)) return current
+        return nextApps.find(app => app.available && app.launchesFiles)?.id || nextApps[0]?.id || ''
+      })
+      return nextApps
+    } catch (caught) {
+      setExternalApps([])
+      setSelectedAppId('')
+      setAppsError(caught instanceof Error ? caught.message : 'The external software bridge is unavailable.')
+      return []
+    } finally {
+      setAppsLoading(false)
+    }
+  }, [backendOnline])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadExternalApps()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadExternalApps])
 
   const selectAsset = useCallback(async () => {
     if (!backendOnline || loading) return
+    let selectedAsset = null
     setLoading(true)
     setError('')
     setNotice('OPENING LOCAL ASSET SELECTOR…')
@@ -663,31 +822,51 @@ export default function ModelDeckPage({
         return
       }
 
-      const nextAsset = normalizeAsset(payload)
-      if (!nextAsset) throw new Error('No model file was returned by the selector.')
-      if (!SUPPORTED_FORMATS.has(nextAsset.extension)) {
-        throw new Error(`.${nextAsset.extension || 'unknown'} IS NOT A SUPPORTED FORMAT.`)
+      selectedAsset = normalizeAsset(payload)
+      if (!selectedAsset) throw new Error('No model file was returned by the selector.')
+
+      const capability = previewCapability(selectedAsset)
+      setModel(null)
+      setStats(null)
+      setAsset(selectedAsset)
+      setPreview(capability)
+
+      if (capability.mode !== 'render') {
+        setNotice(`${selectedAsset.format.toUpperCase()} CATALOGUED // READY FOR EXTERNAL SOFTWARE`)
+        return
       }
 
-      setNotice(`READING ${nextAsset.name.toUpperCase()}…`)
-      const content = await fetch(`${BACKEND}/api/models/file?path=${encodeURIComponent(nextAsset.path)}`)
+      setNotice(`READING ${selectedAsset.name.toUpperCase()}…`)
+      const content = await fetch(`${BACKEND}/api/models/file?path=${encodeURIComponent(selectedAsset.path)}`)
       if (!content.ok) {
         const contentPayload = await content.json().catch(() => null)
         throw new Error(responseMessage(contentPayload, 'ULTRON could not read the selected model.'))
       }
       const buffer = await content.arrayBuffer()
-      const parsed = parseModel(nextAsset.extension, buffer)
+      const parsed = await parseModel(selectedAsset.extension, buffer)
       const nextStats = estimateModelStats(parsed)
 
       setModel(parsed)
-      setAsset({ ...nextAsset, size: nextAsset.size ?? buffer.byteLength })
+      setAsset({ ...selectedAsset, size: selectedAsset.size ?? buffer.byteLength })
       setStats(nextStats)
+      setPreview({ mode: 'render', reason: '' })
       setResetToken(token => token + 1)
       setNotice('GEOMETRY VERIFIED // READY FOR FABRICATION')
     } catch (caught) {
       const message = caught instanceof Error ? caught.message : 'The model could not be decoded.'
-      setError(message)
-      setNotice('ASSET ACQUISITION INTERRUPTED')
+      if (selectedAsset) {
+        setModel(null)
+        setStats(null)
+        setAsset(selectedAsset)
+        setPreview({
+          mode: 'failed',
+          reason: `${message} The file remains catalogued and can be opened in a compatible local application.`,
+        })
+        setNotice('ASSET CATALOGUED // LOCAL PREVIEW UNAVAILABLE')
+      } else {
+        setError(message)
+        setNotice('ASSET ACQUISITION INTERRUPTED')
+      }
     } finally {
       setLoading(false)
     }
@@ -738,14 +917,116 @@ export default function ModelDeckPage({
     }
   }, [actionLoading, asset])
 
-  const metrics = useMemo(() => [
-    { label: 'FORMAT', value: asset ? `.${asset.extension.toUpperCase()}` : '—', detail: asset ? 'VALIDATED INPUT' : 'NO ASSET' },
-    asset?.extension === 'gcode'
-      ? { label: 'PATH SEGMENTS', value: formatTriangles(stats?.toolpathSegments), detail: stats?.toolpathSegments ? 'FABRICATION ROUTES' : 'AWAITING ROUTES' }
-      : { label: 'TRIANGLES', value: formatTriangles(stats?.triangles), detail: stats?.triangles ? 'SURFACE MESH' : 'AWAITING SCAN' },
-    { label: 'BUILD VOLUME', value: formatVolume(stats?.volume), detail: 'ESTIMATED SOLID' },
-    { label: 'FILE SIZE', value: formatBytes(asset?.size), detail: 'LOCAL STORAGE' },
-  ], [asset, stats])
+  const registerExternalApp = useCallback(async event => {
+    event.preventDefault()
+    if (!backendOnline || actionLoading) return
+    setActionLoading('pick-app')
+    setAppsError('')
+    setError('')
+    try {
+      const response = await fetch(`${BACKEND}/api/models/apps/pick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: softwareLabel.trim().slice(0, 80) || undefined }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, 'The application could not be added.'))
+      if (payload?.cancelled || payload?.canceled) return
+
+      const app = normalizeExternalApp(payload?.app)
+      if (app) {
+        setExternalApps(current => [...current.filter(item => item.id !== app.id), app])
+        setSelectedAppId(app.id)
+      }
+      setSoftwareLabel('')
+      setNotice(`${app?.name || 'EXTERNAL APPLICATION'} LINKED TO THE MODEL DECK`)
+      await loadExternalApps()
+    } catch (caught) {
+      setAppsError(caught instanceof Error ? caught.message : 'The application could not be added.')
+    } finally {
+      setActionLoading('')
+    }
+  }, [actionLoading, backendOnline, loadExternalApps, softwareLabel])
+
+  const launchExternalApp = useCallback(async () => {
+    if (!asset || !selectedApp || actionLoading) return
+    setActionLoading('external')
+    setError('')
+    try {
+      if (!selectedApp.available || !selectedApp.launchesFiles) {
+        throw new Error(`${selectedApp.name} is not currently available for file handoff.`)
+      }
+      const response = await fetch(`${BACKEND}/api/models/open-external`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: asset.path, appId: selectedApp.id }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, `${selectedApp.name} could not receive this file.`))
+      setNotice(`${selectedApp.name.toUpperCase()} OPENED WITH ${asset.name.toUpperCase()}`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The external application could not be opened.')
+    } finally {
+      setActionLoading('')
+    }
+  }, [actionLoading, asset, selectedApp])
+
+  const launchSelectedSoftware = useCallback(async () => {
+    if (!selectedApp || actionLoading) return
+    setActionLoading('external-launch')
+    setAppsError('')
+    try {
+      if (!selectedApp.available || !selectedApp.launchesFiles) {
+        throw new Error(`${selectedApp.name} is not currently available on this Mac.`)
+      }
+      const response = await fetch(`${BACKEND}/api/models/apps/${encodeURIComponent(selectedApp.id)}/launch`, {
+        method: 'POST',
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, `${selectedApp.name} could not be opened.`))
+      setNotice(`${selectedApp.name.toUpperCase()} OPENED — USE ITS OWN PRINTER CONNECTION SCREEN`)
+    } catch (caught) {
+      setAppsError(caught instanceof Error ? caught.message : 'The linked application could not be opened.')
+    } finally {
+      setActionLoading('')
+    }
+  }, [actionLoading, selectedApp])
+
+  const removeSelectedSoftware = useCallback(async () => {
+    if (!selectedApp?.configured || actionLoading) return
+    setActionLoading('remove-app')
+    setAppsError('')
+    try {
+      const response = await fetch(`${BACKEND}/api/models/apps/${encodeURIComponent(selectedApp.id)}`, {
+        method: 'DELETE',
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, 'The linked application could not be removed.'))
+      setNotice(`${selectedApp.name.toUpperCase()} REMOVED FROM THIS LOCAL ACCOUNT`)
+      await loadExternalApps()
+    } catch (caught) {
+      setAppsError(caught instanceof Error ? caught.message : 'The linked application could not be removed.')
+    } finally {
+      setActionLoading('')
+    }
+  }, [actionLoading, loadExternalApps, selectedApp])
+
+  const metrics = useMemo(() => {
+    const telemetry = asset?.telemetry || {}
+    const toolpath = ['gcode', 'gco', 'gc', 'g', 'nc', 'tap'].includes(asset?.extension)
+    const meshCount = stats?.triangles ?? telemetry.triangles ?? telemetry.faces ?? telemetry.facetsInSample
+    const pathCount = stats?.toolpathSegments ?? telemetry.pathSegments
+    const metadataMode = Boolean(asset && !model)
+
+    return [
+      { label: 'FORMAT', value: asset ? asset.format || `.${asset.extension.toUpperCase()}` : '—', detail: asset ? 'LOCAL CATALOGUE' : 'NO ASSET' },
+      { label: 'VIEW MODE', value: model ? 'LIVE' : asset ? 'METADATA' : '—', detail: model ? 'INTERACTIVE INSPECTION' : metadataMode ? 'NATIVE APP HANDOFF' : 'AWAITING INPUT' },
+      toolpath
+        ? { label: 'PATH SEGMENTS', value: formatTriangles(pathCount), detail: pathCount ? 'FABRICATION ROUTES' : 'READ ON OPEN' }
+        : { label: 'MESH DATA', value: formatTriangles(meshCount), detail: meshCount ? 'LOCAL MODEL FACTS' : asset ? 'NATIVE APP ANALYSIS' : 'AWAITING SCAN' },
+      { label: 'FILE SIZE', value: formatBytes(asset?.size), detail: asset?.modified ? 'LOCAL STORAGE' : 'NO ASSET' },
+    ]
+  }, [asset, model, stats])
 
   return (
     <section className="model-deck" aria-label="ULTRON fabrication model deck">
@@ -773,19 +1054,22 @@ export default function ModelDeckPage({
               <span>ASSET VISUALIZATION BAY</span>
               <strong>{asset?.name || 'NO GEOMETRY LOADED'}</strong>
             </div>
-            <button
-              type="button"
-              className="model-deck-reset-view"
-              onClick={() => setResetToken(token => token + 1)}
-              disabled={!model}
-            >
-              RESET OPTICS
-            </button>
+            <div className="model-deck-hero-tools">
+              {asset && <span className="model-deck-preview-state" data-mode={preview.mode}>{model ? 'LIVE PREVIEW' : 'METADATA VIEW'}</span>}
+              <button
+                type="button"
+                className="model-deck-reset-view"
+                onClick={() => setResetToken(token => token + 1)}
+                disabled={!model}
+              >
+                RESET OPTICS
+              </button>
+            </div>
           </div>
-          <ModelViewport model={model} loading={loading} resetToken={resetToken} />
+          <ModelViewport model={model} asset={asset} loading={loading} preview={preview} resetToken={resetToken} />
           <div className="model-deck-hero-footer">
-            <span>ROTATE // INSPECT // ZOOM</span>
-            <span>{model ? 'MESH INTEGRITY: NOMINAL' : 'MESH INTEGRITY: AWAITING INPUT'}</span>
+            <span>{model ? 'ROTATE // INSPECT // ZOOM' : 'CATALOGUE // HANDOFF // INSPECT'}</span>
+            <span><AssetPreviewState asset={asset} model={model} preview={preview} /></span>
           </div>
         </section>
 
@@ -798,7 +1082,7 @@ export default function ModelDeckPage({
             <div className="model-deck-printer-readout">
               <strong>3D PRINTER</strong>
               <span>{printerState}</span>
-              <small>{printerStatus?.port || 'USB AUTO DETECTION // LOCAL CELL'}</small>
+              <small>{printerTransport}</small>
             </div>
           </section>
 
@@ -808,6 +1092,74 @@ export default function ModelDeckPage({
               {metrics.map(metric => <Metric key={metric.label} {...metric} active={Boolean(asset)} />)}
             </div>
           </section>
+
+          <section className="model-deck-software-panel">
+            <div className="model-deck-section-title">
+              <span>SOFTWARE BRIDGE</span>
+              <button type="button" onClick={loadExternalApps} disabled={appsLoading || !backendOnline} title="Refresh external applications">
+                {appsLoading ? 'SYNC…' : 'SYNC'}
+              </button>
+            </div>
+            <p>Link a local slicer, CAD tool or printer studio. ULTRON opens only the app and model you explicitly select.</p>
+            {externalApps.length > 0 ? (
+              <div className="model-deck-software-list" role="list" aria-label="Linked external applications">
+                {externalApps.map(app => (
+                  <button
+                    type="button"
+                    className="model-deck-software-app"
+                    key={app.id}
+                    data-selected={app.id === selectedAppId ? 'true' : 'false'}
+                    data-available={app.available && app.launchesFiles ? 'true' : 'false'}
+                    onClick={() => setSelectedAppId(app.id)}
+                    title={`Use ${app.name} for the selected local file`}
+                  >
+                    <i />
+                    <span><strong>{app.name}</strong><small>{app.kind}{app.supports.length ? ` · ${app.supports.slice(0, 4).join(', ')}` : ''}</small></span>
+                    <em>{app.available && app.launchesFiles ? 'READY' : 'CHECK APP'}</em>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="model-deck-software-empty">NO APP LINKED YET · ADD ULTIMAKER CURA, BAMBU STUDIO OR YOUR OWN LOCAL TOOL.</div>
+            )}
+            <form className="model-deck-software-add" onSubmit={registerExternalApp}>
+              <label htmlFor="model-deck-software-label">APP LABEL</label>
+              <input
+                id="model-deck-software-label"
+                value={softwareLabel}
+                onChange={event => setSoftwareLabel(event.target.value)}
+                maxLength="80"
+                placeholder="Bambu Studio, Cura, CAD…"
+              />
+              <button type="submit" disabled={!backendOnline || Boolean(actionLoading)}>
+                {actionLoading === 'pick-app' ? 'CHOOSING…' : 'ADD APP'}
+              </button>
+            </form>
+            <div className="model-deck-software-actions">
+              <button
+                type="button"
+                onClick={launchSelectedSoftware}
+                disabled={!selectedApp?.available || !selectedApp?.launchesFiles || Boolean(actionLoading)}
+                title={selectedApp ? `Open ${selectedApp.name}` : 'Choose a linked application first'}
+              >
+                {actionLoading === 'external-launch' ? 'OPENING…' : selectedApp ? `OPEN ${selectedApp.name.toUpperCase()}` : 'OPEN SELECTED APP'}
+              </button>
+              {selectedApp?.configured && (
+                <button
+                  type="button"
+                  className="model-deck-software-remove"
+                  onClick={removeSelectedSoftware}
+                  disabled={Boolean(actionLoading)}
+                  title={`Remove ${selectedApp.name} from this local account`}
+                >
+                  {actionLoading === 'remove-app' ? 'REMOVING…' : 'REMOVE LINK'}
+                </button>
+              )}
+            </div>
+            {appsError && <p className="model-deck-software-feedback">{appsError}</p>}
+          </section>
+
+          <FormatCatalogue />
 
           <section className="model-deck-bounds-panel">
             <div className="model-deck-section-title"><span>ENVELOPE DIMENSIONS</span><b>XYZ</b></div>
@@ -832,6 +1184,13 @@ export default function ModelDeckPage({
           </ActionButton>
           <ActionButton onClick={launchCura} disabled={!asset || Boolean(actionLoading)} tone="danger" title="Open this asset in Ultimaker Cura">
             {actionLoading === 'cura' ? 'OPENING CURA…' : 'OPEN IN CURA'}
+          </ActionButton>
+          <ActionButton
+            onClick={launchExternalApp}
+            disabled={!asset || !selectedApp?.available || !selectedApp?.launchesFiles || Boolean(actionLoading)}
+            title={selectedApp ? `Open this asset in ${selectedApp.name}` : 'Choose a ready application in Software Bridge first'}
+          >
+            {actionLoading === 'external' ? 'OPENING APP…' : selectedApp ? `OPEN IN ${selectedApp.name.toUpperCase()}` : 'OPEN IN LINKED APP'}
           </ActionButton>
           <ActionButton onClick={revealAsset} disabled={!asset || Boolean(actionLoading)} title="Reveal this asset in Finder">
             {actionLoading === 'reveal' ? 'REVEALING…' : 'REVEAL IN FINDER'}

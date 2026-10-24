@@ -1,13 +1,14 @@
 import * as THREE from 'three'
 import DevicesPage from './components/DevicesPage.jsx'
 import MemoryPage from './components/MemoryPage.jsx'
-import ModelDeckPage from './components/ModelDeckPage.jsx'
 import SettingsPage from './components/SettingsPage.jsx'
 import OnboardingTutorial from './components/OnboardingTutorial.jsx'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { BACKEND_ORIGIN as BACKEND } from './auth.js'
 import './App.css'
+
+const ModelDeckPage = lazy(() => import('./components/ModelDeckPage.jsx'))
 
 const INITIAL_CHAT_TIMESTAMP = Date.now()
 
@@ -4645,11 +4646,13 @@ function App({ user = null, onLogout = () => {} }) {
 
           {activePage ===
             'MODEL_DECK' && (
-            <ModelDeckPage
-              onBack={() => setActivePage('DEVICES')}
-              backendOnline={backendOnline}
-              printerStatus={printerStatus}
-            />
+            <Suspense fallback={<div className="model-deck-loading">LOADING MODEL DECK…</div>}>
+              <ModelDeckPage
+                onBack={() => setActivePage('DEVICES')}
+                backendOnline={backendOnline}
+                printerStatus={printerStatus}
+              />
+            </Suspense>
           )}
 
         </div>
@@ -4740,9 +4743,13 @@ function App({ user = null, onLogout = () => {} }) {
                     ? printerStatus.port
                         .split('/')
                         .pop()
-                    : 'USB'
+                    : printerStatus.baseUrl
+                      ? 'WI-FI / LAN'
+                      : 'LOCAL LINK'
                 }`
-              : 'AUTO USB DETECTION'
+              : printerStatus.profileId
+                ? 'PROFILE SAVED · NOT CONNECTED'
+                : 'CONFIGURE IN DEVICES'
           }
           progress={
             typeof printerStatus.progress === 'number'

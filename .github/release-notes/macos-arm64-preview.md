@@ -15,7 +15,9 @@ and download verification.
 
 - Electron desktop app and local FastAPI core;
 - local account profiles, explicit memory confirmation and security boundaries;
-- optional Ollama, Obsidian, Mail, Cura and 3D-printer integrations;
+- optional Ollama, Obsidian, Mail and local fabrication integrations;
+- Model Deck catalogue for all selected local files, with in-app previews for supported meshes/toolpaths, safe handoff to Cura, Bambu Studio, OrcaSlicer, PrusaSlicer or a chosen macOS app, and a direct way to open the linked app for its own printer setup;
+- explicit read-only printer profiles for Marlin-compatible USB, local OctoPrint and local Klipper/Moonraker;
 - a first-launch guide that keeps optional services off until you choose them.
 
 ## Candidate status

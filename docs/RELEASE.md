@@ -112,6 +112,7 @@ who download it.
 python scripts/repository-hygiene.py
 backend/.venv/bin/python scripts/security-smoke-test.py
 backend/.venv/bin/python scripts/location-lookup-test.py
+backend/.venv/bin/python scripts/fabrication-integration-test.py
 npm --prefix frontend run build
 node --check desktop/main.cjs
 ~~~

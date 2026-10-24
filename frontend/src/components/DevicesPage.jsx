@@ -1,3 +1,6 @@
+import { useCallback, useEffect, useState } from 'react'
+import { BACKEND_ORIGIN as BACKEND } from '../auth.js'
+
 function isKnownNumber(value) {
   return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value))
 }
@@ -151,6 +154,298 @@ function DeviceControl({ children, className = '', disabled, onClick, title }) {
   )
 }
 
+function connectionErrorMessage(payload, fallback) {
+  if (typeof payload === 'string') return payload
+  return payload?.detail || payload?.error || payload?.message || fallback
+}
+
+function PrinterConnectionHub({ backendOnline, printerStatus, onConnectionChanged }) {
+  const [profiles, setProfiles] = useState([])
+  const [ports, setPorts] = useState([])
+  const [form, setForm] = useState({
+    profileId: 'marlin-usb',
+    usbPort: '',
+    baudRate: '115200',
+    baseUrl: '',
+    monitoring: true,
+    credential: '',
+  })
+  const [credentialState, setCredentialState] = useState('none')
+  const [loading, setLoading] = useState(false)
+  const [action, setAction] = useState('')
+  const [notice, setNotice] = useState('CHOOSE A LOCAL LINK PROFILE TO BEGIN')
+  const [error, setError] = useState('')
+
+  const request = useCallback(async (path, options = {}) => {
+    const response = await fetch(`${BACKEND}${path}`, options)
+    const payload = await response.json().catch(() => null)
+    if (!response.ok || payload?.ok === false) {
+      throw new Error(connectionErrorMessage(payload, 'The local printer command could not be completed.'))
+    }
+    return payload
+  }, [])
+
+  const updateFromConfig = useCallback((config, nextProfiles = []) => {
+    const usableProfiles = Array.isArray(nextProfiles) ? nextProfiles : []
+    const defaultProfile = usableProfiles.find(profile => profile.id === 'marlin-usb' && profile.available)
+      || usableProfiles.find(profile => profile.available)
+
+    setForm(current => ({
+      ...current,
+      profileId: config?.profileId || current.profileId || defaultProfile?.id || '',
+      usbPort: config?.usbPort || current.usbPort || '',
+      baudRate: String(config?.baudRate || current.baudRate || 115200),
+      baseUrl: config?.baseUrl || current.baseUrl || '',
+      monitoring: config?.monitoring ?? current.monitoring,
+      credential: '',
+    }))
+    setCredentialState(config?.credentialStorage || 'none')
+  }, [])
+
+  const loadConnectionData = useCallback(async ({ refreshPorts = false } = {}) => {
+    if (!backendOnline) {
+      setProfiles([])
+      setPorts([])
+      setNotice('LOCAL CORE OFFLINE — PRINTER LINKS ARE UNAVAILABLE')
+      return
+    }
+
+    setLoading(true)
+    setError('')
+    try {
+      const jobs = refreshPorts
+        ? [request('/api/printer/ports')]
+        : [
+            request('/api/printer/profiles'),
+            request('/api/printer/ports'),
+            request('/api/printer/config'),
+          ]
+      const results = await Promise.all(jobs)
+      if (refreshPorts) {
+        setPorts(Array.isArray(results[0]?.ports) ? results[0].ports : [])
+        setNotice('USB PORT LIST REFRESHED — NO PORT WAS OPENED')
+        return
+      }
+
+      const nextProfiles = Array.isArray(results[0]?.profiles) ? results[0].profiles : []
+      setProfiles(nextProfiles)
+      setPorts(Array.isArray(results[1]?.ports) ? results[1].ports : [])
+      updateFromConfig(results[2], nextProfiles)
+      setNotice(results[2]?.configured
+        ? 'SAVED LOCAL PRINTER PROFILE READY'
+        : 'CHOOSE A LOCAL LINK PROFILE TO BEGIN')
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The printer connection center is unavailable.')
+    } finally {
+      setLoading(false)
+    }
+  }, [backendOnline, request, updateFromConfig])
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      void loadConnectionData()
+    }, 0)
+    return () => window.clearTimeout(timer)
+  }, [loadConnectionData])
+
+  const selectedProfile = profiles.find(profile => profile.id === form.profileId) || null
+  const usesUsb = selectedProfile?.transport === 'usb'
+  const usesLan = selectedProfile?.transport === 'lan'
+  const profileAvailable = Boolean(selectedProfile?.available)
+  const savePayload = useCallback(() => {
+    const payload = {
+      profileId: form.profileId,
+      usbPort: form.usbPort.trim() || null,
+      baudRate: Number(form.baudRate) || 115200,
+      baseUrl: form.baseUrl.trim() || null,
+      monitoring: Boolean(form.monitoring),
+    }
+    // Omitting a blank credential preserves an already stored Keychain entry.
+    if (form.credential.trim()) payload.credential = form.credential.trim()
+    return payload
+  }, [form])
+
+  const updateForm = (key, value) => {
+    setForm(current => ({ ...current, [key]: value }))
+    setError('')
+  }
+
+  const saveProfile = useCallback(async ({ quiet = false } = {}) => {
+    if (!backendOnline || !form.profileId || !profileAvailable) return false
+    setAction('save')
+    setError('')
+    try {
+      const payload = await request('/api/printer/config', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savePayload()),
+      })
+      updateFromConfig(payload?.config, profiles)
+      if (!quiet) setNotice('LOCAL PRINTER PROFILE SAVED — CREDENTIALS STAY PRIVATE')
+      return true
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The local printer profile could not be saved.')
+      return false
+    } finally {
+      setAction('')
+    }
+  }, [backendOnline, form.profileId, profileAvailable, profiles, request, savePayload, updateFromConfig])
+
+  const testConnection = useCallback(async () => {
+    if (!backendOnline || !form.profileId || !profileAvailable) return
+    setAction('test')
+    setError('')
+    try {
+      const payload = await request('/api/printer/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(savePayload()),
+      })
+      const status = payload?.test || {}
+      setNotice(`READ-ONLY TEST READY — ${status.status || 'LOCAL LINK RESPONDED'}`)
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The local printer did not respond to the test.')
+    } finally {
+      setAction('')
+    }
+  }, [backendOnline, form.profileId, profileAvailable, request, savePayload])
+
+  const connectPrinter = useCallback(async () => {
+    if (!backendOnline || !form.profileId || !profileAvailable) return
+    setAction('connect')
+    setError('')
+    try {
+      const saved = await saveProfile({ quiet: true })
+      if (!saved) return
+      const payload = await request('/api/printer/connect', { method: 'POST' })
+      setNotice(`PRINTER LINK ACTIVE — ${payload?.status?.status || 'CONNECTED'}`)
+      setForm(current => ({ ...current, credential: '' }))
+      if (typeof onConnectionChanged === 'function') await onConnectionChanged()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The printer could not be connected.')
+    } finally {
+      setAction('')
+    }
+  }, [backendOnline, form.profileId, onConnectionChanged, profileAvailable, request, saveProfile])
+
+  const disconnectPrinter = useCallback(async () => {
+    if (!backendOnline) return
+    setAction('disconnect')
+    setError('')
+    try {
+      await request('/api/printer/disconnect', { method: 'POST' })
+      setNotice('PRINTER LINK CLOSED — NO DEVICE IS BEING POLLED')
+      if (typeof onConnectionChanged === 'function') await onConnectionChanged()
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : 'The printer link could not be closed.')
+    } finally {
+      setAction('')
+    }
+  }, [backendOnline, onConnectionChanged, request])
+
+  return (
+    <section className="device-printer-connection" aria-label="3D printer connection center">
+      <header className="device-printer-connection-header">
+        <div>
+          <span>FABRICATION LINK MATRIX // EXPLICIT LOCAL CONNECTIONS</span>
+          <h2>Printer Connection Center</h2>
+          <p>Save one local profile, test it read-only, then choose when ULTRON may monitor it.</p>
+        </div>
+        <div className="device-printer-connection-state" data-online={printerStatus?.connected ? 'true' : 'false'}>
+          <StatusPip active={Boolean(printerStatus?.connected)} />
+          <span>{printerStatus?.connected ? 'LINK ACTIVE' : 'NO ACTIVE LINK'}</span>
+        </div>
+      </header>
+
+      <div className="device-printer-profile-grid" role="list" aria-label="Available printer profiles">
+        {profiles.map(profile => (
+          <button
+            key={profile.id}
+            type="button"
+            className="device-printer-profile"
+            data-selected={profile.id === form.profileId ? 'true' : 'false'}
+            data-available={profile.available ? 'true' : 'false'}
+            onClick={() => profile.available && updateForm('profileId', profile.id)}
+            disabled={!profile.available || loading || Boolean(action)}
+          >
+            <span>{profile.transport === 'lan' ? 'WI-FI / LAN' : profile.transport === 'usb' ? 'USB SERIAL' : 'EXTERNAL APP'}</span>
+            <strong>{profile.name}</strong>
+            <small>{profile.available ? profile.limitation || profile.limitations : 'USE THE SOFTWARE BRIDGE IN MODEL DECK'}</small>
+          </button>
+        ))}
+      </div>
+
+      {selectedProfile && (
+        <div className="device-printer-connection-fields">
+          <div className="device-printer-selected-profile">
+            <div>
+              <span>SELECTED PROFILE</span>
+              <strong>{selectedProfile.name}</strong>
+            </div>
+            <p>{selectedProfile.limitations || 'Read-only telemetry is available after an explicit connection.'}</p>
+            <div className="device-printer-capabilities">
+              {(selectedProfile.supports || []).map(capability => <span key={capability}>{String(capability).replaceAll('-', ' ')}</span>)}
+            </div>
+          </div>
+
+          {usesUsb && (
+            <>
+              <label className="device-printer-field">
+                <span>USB PORT</span>
+                <select value={form.usbPort} onChange={event => updateForm('usbPort', event.target.value)}>
+                  <option value="">Select detected USB port…</option>
+                  {ports.map(port => <option key={port.device} value={port.device}>{port.label || port.device}</option>)}
+                </select>
+              </label>
+              <label className="device-printer-field">
+                <span>BAUD RATE</span>
+                <select value={form.baudRate} onChange={event => updateForm('baudRate', event.target.value)}>
+                  {[9600, 19200, 38400, 57600, 115200, 230400, 250000].map(rate => <option key={rate} value={String(rate)}>{rate}</option>)}
+                </select>
+              </label>
+              <button type="button" className="device-control device-control-quiet" onClick={() => void loadConnectionData({ refreshPorts: true })} disabled={!backendOnline || loading || Boolean(action)}>
+                {loading ? 'READING PORTS…' : 'REFRESH USB PORTS'}
+              </button>
+              <p className="device-printer-field-note">Port discovery only reads macOS metadata. ULTRON opens a selected port only when you test or connect it.</p>
+            </>
+          )}
+
+          {usesLan && (
+            <>
+              <label className="device-printer-field device-printer-field-wide">
+                <span>LOCAL PRINTER URL</span>
+                <input value={form.baseUrl} onChange={event => updateForm('baseUrl', event.target.value)} placeholder="http://192.168.1.42:5000" inputMode="url" autoComplete="off" />
+              </label>
+              <label className="device-printer-field device-printer-field-wide">
+                <span>{selectedProfile.id === 'octoprint-local' ? 'OCTOPRINT API KEY' : 'MOONRAKER TOKEN (OPTIONAL)'}</span>
+                <input type="password" value={form.credential} onChange={event => updateForm('credential', event.target.value)} placeholder={credentialState === 'keychain' ? 'Stored in macOS Keychain — leave blank to keep it' : 'Enter only if this local printer requires one'} autoComplete="new-password" />
+              </label>
+              <p className="device-printer-field-note">Only your chosen local URL is contacted. A saved credential is held in macOS Keychain when available and is never shown again here.</p>
+            </>
+          )}
+
+          <label className="device-printer-monitor-toggle">
+            <input type="checkbox" checked={Boolean(form.monitoring)} onChange={event => updateForm('monitoring', event.target.checked)} />
+            <span><strong>MONITOR AFTER CONNECTING</strong> Refresh read-only printer status while this app is open.</span>
+          </label>
+
+          <div className="device-printer-connection-actions">
+            <button type="button" className="device-control device-control-quiet" disabled={!backendOnline || Boolean(action) || !profileAvailable} onClick={() => void saveProfile()}>{action === 'save' ? 'SAVING…' : 'SAVE PROFILE'}</button>
+            <button type="button" className="device-control device-control-secondary" disabled={!backendOnline || Boolean(action) || !profileAvailable} onClick={() => void testConnection()}>{action === 'test' ? 'TESTING…' : 'READ-ONLY TEST'}</button>
+            <button type="button" className="device-control device-control-primary" disabled={!backendOnline || Boolean(action) || !profileAvailable} onClick={() => void connectPrinter()}>{action === 'connect' ? 'CONNECTING…' : 'SAVE & CONNECT'}</button>
+            <button type="button" className="device-control device-control-danger" disabled={!backendOnline || Boolean(action) || !printerStatus?.connected} onClick={() => void disconnectPrinter()}>{action === 'disconnect' ? 'CLOSING…' : 'DISCONNECT'}</button>
+          </div>
+        </div>
+      )}
+
+      <div className="device-printer-connection-message" data-error={error ? 'true' : 'false'} aria-live="polite">
+        <StatusPip active={!error && Boolean(printerStatus?.connected)} />
+        <span>{error || notice}</span>
+      </div>
+    </section>
+  )
+}
+
 /**
  * Device command center for the ULTRON dashboard.
  *
@@ -170,6 +465,8 @@ export default function DevicesPage({
 }) {
   const printerConnected = Boolean(printerStatus?.connected)
   const printerProgress = clampPercent(printerStatus?.progress)
+  const printerTransport = printerStatus?.transport === 'lan' ? 'WI-FI / LAN' : printerStatus?.transport === 'usb' ? 'USB SERIAL' : 'LOCAL LINK'
+  const printerEndpoint = printerStatus?.port || printerStatus?.baseUrl || 'NO PRINTER CONFIGURED'
   const coreOnline = Boolean(backendOnline && system)
   const networkOnline = coreOnline && (
     isKnownNumber(system?.download_mbps) ||
@@ -257,7 +554,7 @@ export default function DevicesPage({
             </div>
             <div className="device-card-state" data-online={printerConnected ? 'true' : 'false'}>
               <StatusPip active={printerConnected} />
-              <strong>{statusLabel(printerConnected, 'USB ONLINE', 'WAITING')}</strong>
+              <strong>{statusLabel(printerConnected, `${printerTransport} ONLINE`, 'WAITING')}</strong>
             </div>
           </header>
 
@@ -265,7 +562,7 @@ export default function DevicesPage({
 
           <dl className="device-printer-readout">
             <div><dt>STATE</dt><dd>{printerStatus?.status || 'NOT CONNECTED'}</dd></div>
-            <div><dt>PORT</dt><dd>{printerStatus?.port || 'NO USB DEVICE'}</dd></div>
+            <div><dt>LINK</dt><dd>{printerEndpoint}</dd></div>
             <div><dt>FIRMWARE</dt><dd>{printerStatus?.firmware || 'AWAITING HANDSHAKE'}</dd></div>
             <div><dt>JOB PROGRESS</dt><dd>{printerProgress === null ? 'NO ACTIVE JOB' : `${printerProgress.toFixed(1)}%`}</dd></div>
           </dl>
@@ -276,7 +573,7 @@ export default function DevicesPage({
 
           {printerStatus?.raw && (
             <div className="device-printer-diagnostic" title={printerStatus.raw}>
-              <span>LAST SERIAL SIGNAL</span>
+              <span>LAST LOCAL SIGNAL</span>
               <code>{String(printerStatus.raw).replace(/\s+/g, ' ').slice(0, 140)}</code>
             </div>
           )}
@@ -295,9 +592,9 @@ export default function DevicesPage({
               className="device-control-primary"
               disabled={!refreshAvailable}
               onClick={onRefresh}
-              title={refreshAvailable ? 'Scan the USB printer and refresh telemetry' : 'Scan action is unavailable'}
+              title={refreshAvailable ? 'Refresh saved local telemetry without opening a printer port' : 'Refresh action is unavailable'}
             >
-              {isRefreshing ? 'SCANNING…' : 'SCAN USB LINK'}
+              {isRefreshing ? 'REFRESHING…' : 'REFRESH STATUS'}
             </DeviceControl>
             <DeviceControl
               className="device-control-secondary"
@@ -310,6 +607,12 @@ export default function DevicesPage({
           </div>
         </section>
       </div>
+
+      <PrinterConnectionHub
+        backendOnline={backendOnline}
+        printerStatus={printerStatus}
+        onConnectionChanged={onRefresh}
+      />
 
       <section className="device-network-roster" aria-label="Device network roster">
         <header>
@@ -325,7 +628,7 @@ export default function DevicesPage({
           <article data-online={printerConnected ? 'true' : 'false'}>
             <StatusPip active={printerConnected} />
             <div><span>3D PRINTER</span><strong>{printerConnected ? 'LINKED' : 'STANDBY'}</strong></div>
-            <small>{printerStatus?.port || 'USB AUTO DETECTION'}</small>
+            <small>{printerEndpoint}</small>
           </article>
           <article data-online="false">
             <StatusPip active={false} />
