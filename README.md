@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/ultron-mark.png" width="132" alt="ULTRON mark" />
+  <img src="frontend/public/ultron-mark.jpg" width="132" alt="ULTRON mark" />
 </p>
 
 <h1 align="center">ULTRON</h1>
@@ -24,6 +24,33 @@
   <a href="#build-a-macos-app">Build</a> ·
   <a href="docs/RELEASE.md">Release guide</a>
 </p>
+
+## See ULTRON in action
+
+<p align="center">
+  <img src="docs/images/ultron-neural-core.jpg" alt="ULTRON Neural Core command center" width="100%" />
+</p>
+
+<p align="center"><em>The Neural Core: a local command center for the agent, memory, devices and system telemetry.</em></p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top">
+      <img src="docs/images/ultron-devices-command.jpg" alt="ULTRON Device Command and Printer Connection Center" />
+      <strong>Device Command</strong><br />
+      Monitor the Mac, choose an explicit printer connection and open the 3D workflow from one local panel.
+    </td>
+    <td width="50%" valign="top">
+      <img src="docs/images/ultron-model-deck.jpg" alt="ULTRON Model Deck with software bridge" />
+      <strong>Model Deck</strong><br />
+      Inspect local fabrication assets and hand the selected file to a local slicer, CAD tool or printer studio.
+    </td>
+  </tr>
+</table>
+
+_All screenshots use an isolated demo operator. They contain no vault, email, selected model or personal account data._
+
+---
 
 > [!IMPORTANT]
 > ULTRON launches first on **macOS Apple Silicon**. It is designed for people who want a local assistant and local control surface, without an ULTRON cloud account or telemetry service.
