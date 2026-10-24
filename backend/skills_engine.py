@@ -447,8 +447,8 @@ def execute_skill_for_message(
             return None
 
         return {
-            "reply": f"Skill '{skill.get('name', 'Unnamed')}' is active but its action is not implemented yet.",
-            "action": "skill_pending",
+            "reply": "This saved custom skill is no longer supported. Edit it in Settings and choose a supported action.",
+            "action": "skill_error",
         }
 
     return None

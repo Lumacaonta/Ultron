@@ -20,6 +20,29 @@ router = APIRouter(
 )
 
 
+# These are the safe, fully implemented action types that a person can choose
+# when creating a custom skill from Settings. Built-in skills retain their
+# own action type and can only be enabled or disabled.
+CUSTOM_SKILL_ACTIONS = {
+    "ask_ai",
+    "open_app",
+    "open_url",
+    "research",
+}
+
+
+def _custom_action(value: str) -> str:
+    action = str(value or "").strip()
+
+    if action not in CUSTOM_SKILL_ACTIONS:
+        raise HTTPException(
+            status_code=422,
+            detail="Custom skills must use a supported action.",
+        )
+
+    return action
+
+
 class SkillRequest(BaseModel):
     id: str | None = None
     name: str
@@ -56,7 +79,7 @@ def create_skill(request: SkillRequest):
         "name": request.name.strip(),
         "description": request.description.strip(),
         "trigger": request.trigger.strip(),
-        "action": request.action.strip(),
+        "action": _custom_action(request.action),
         "target": request.target.strip(),
         "enabled": request.enabled,
         "builtin": False,
@@ -101,17 +124,28 @@ def update_skill(
         or bool(current.get("builtin"))
     )
 
-    skill = {
-        "id": skill_id,
-        "name": request.name.strip(),
-        "description": request.description.strip(),
-        "trigger": request.trigger.strip(),
-        "action": request.action.strip(),
-        "target": request.target.strip(),
-        "enabled": request.enabled,
-        "builtin": builtin,
-        "custom": not builtin,
-    }
+    if builtin:
+        # Built-in commands implement their own trusted action path. Editing
+        # their trigger or action from the generic skill form could otherwise
+        # turn a working local integration into an unsupported command.
+        skill = {
+            **current,
+            "enabled": request.enabled,
+            "builtin": True,
+            "custom": False,
+        }
+    else:
+        skill = {
+            "id": skill_id,
+            "name": request.name.strip(),
+            "description": request.description.strip(),
+            "trigger": request.trigger.strip(),
+            "action": _custom_action(request.action),
+            "target": request.target.strip(),
+            "enabled": request.enabled,
+            "builtin": False,
+            "custom": True,
+        }
 
     upsert_skill(skill)
 

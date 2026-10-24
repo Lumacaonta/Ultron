@@ -696,6 +696,98 @@ button:disabled {
   height: 100% !important;
 }
 
+.brain-renderer-fallback {
+  display: grid;
+  place-content: center;
+  gap: 0.45rem;
+  min-height: 14rem;
+  padding: 2rem;
+  border: 1px solid rgba(255, 91, 82, 0.24);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(189, 18, 29, 0.22), transparent 34%),
+    linear-gradient(140deg, rgba(87, 6, 14, 0.32), rgba(6, 7, 9, 0.72));
+  color: #e7b7b3;
+  text-align: center;
+}
+
+.brain-renderer-fallback > span,
+.brain-renderer-fallback > strong {
+  font-family: var(--hud-mono);
+  letter-spacing: 0.13em;
+}
+
+.brain-renderer-fallback > span {
+  color: #cf817a;
+  font-size: 0.48rem;
+  font-weight: 760;
+}
+
+.brain-renderer-fallback > strong {
+  color: #fff0ee;
+  font-size: 0.74rem;
+}
+
+.brain-renderer-fallback > p {
+  max-width: 28rem;
+  margin: 0.1rem auto 0;
+  color: #b99895;
+  font-size: 0.68rem;
+  line-height: 1.55;
+}
+
+.brain-fallback-signal {
+  position: relative;
+  width: 5.3rem;
+  height: 5.3rem;
+  margin: 0 auto 0.25rem;
+  border: 1px solid rgba(255, 84, 75, 0.68);
+  border-radius: 50%;
+  box-shadow: 0 0 1.6rem rgba(255, 41, 34, 0.28), inset 0 0 1.2rem rgba(255, 41, 34, 0.16);
+}
+
+.brain-fallback-signal::before,
+.brain-fallback-signal::after,
+.brain-fallback-signal i {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: block;
+  border: 1px solid rgba(255, 112, 105, 0.58);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  content: "";
+}
+
+.brain-fallback-signal::before {
+  width: 1.1rem;
+  height: 1.1rem;
+  background: #e73331;
+  box-shadow: 0 0 1.35rem rgba(255, 51, 43, 0.9);
+}
+
+.brain-fallback-signal::after {
+  width: 3.15rem;
+  height: 3.15rem;
+}
+
+.brain-fallback-signal i:nth-child(1) {
+  width: 4.35rem;
+  height: 4.35rem;
+}
+
+.brain-fallback-signal i:nth-child(2) {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-style: dashed;
+}
+
+.brain-fallback-signal i:nth-child(3) {
+  width: 0.38rem;
+  height: 0.38rem;
+  border: 0;
+  background: #fff0ee;
+  box-shadow: 0 0 0.85rem rgba(255, 118, 110, 0.9);
+}
+
 .selection-card {
   position: absolute;
   right: 1rem;
@@ -4018,6 +4110,60 @@ button:disabled {
 }
 
 .global-position-feedback { color: #f0aaa5; }
+
+.global-position-globe-fallback {
+  display: grid;
+  place-items: center;
+  min-height: 17.5rem;
+  border: 1px solid rgba(255, 95, 89, 0.22);
+  background:
+    radial-gradient(circle at 50% 48%, rgba(181, 16, 31, 0.2), transparent 34%),
+    linear-gradient(145deg, rgba(62, 4, 12, 0.42), rgba(5, 7, 9, 0.88));
+}
+
+.global-position-fallback-message {
+  display: grid;
+  justify-items: center;
+  gap: 0.42rem;
+  max-width: 24rem;
+  padding: 3rem 2rem 1.6rem;
+  color: #c79b97;
+  text-align: center;
+}
+
+.global-position-fallback-message > i {
+  width: 3.8rem;
+  height: 3.8rem;
+  border: 1px solid rgba(255, 102, 96, 0.66);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 37% 37%, rgba(255, 98, 101, 0.72) 0 3%, transparent 4%),
+    linear-gradient(0deg, transparent 48%, rgba(255, 133, 127, 0.45) 49% 51%, transparent 52%),
+    linear-gradient(90deg, transparent 48%, rgba(255, 133, 127, 0.45) 49% 51%, transparent 52%);
+  box-shadow: 0 0 1.3rem rgba(255, 47, 41, 0.24), inset 0 0 1rem rgba(255, 47, 41, 0.14);
+}
+
+.global-position-fallback-message > strong,
+.global-position-fallback-message > span {
+  font-family: var(--hud-mono);
+  letter-spacing: 0.1em;
+}
+
+.global-position-fallback-message > strong {
+  color: #fff0ee;
+  font-size: 0.65rem;
+}
+
+.global-position-fallback-message > span {
+  color: #d98881;
+  font-size: 0.45rem;
+}
+
+.global-position-fallback-message > p {
+  margin: 0.12rem 0 0;
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
 
 .global-position-results {
   display: grid;

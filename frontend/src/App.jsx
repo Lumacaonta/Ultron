@@ -24,6 +24,24 @@ const DEFAULT_WEATHER_CONFIG = {
   lon: '',
 }
 
+function weatherIcon(code) {
+  const value = Number(code)
+
+  if (!Number.isFinite(value)) return '☁'
+  if (value === 0) return '☀'
+  if (value === 1 || value === 2) return '⛅'
+  if (value === 3) return '☁'
+  if (value === 45 || value === 48) return '〰'
+  if (value >= 51 && value <= 57) return '🌦'
+  if (value >= 61 && value <= 67) return '🌧'
+  if (value >= 71 && value <= 77) return '❄'
+  if (value >= 80 && value <= 82) return '🌧'
+  if (value >= 85 && value <= 86) return '🌨'
+  if (value >= 95) return '⛈'
+
+  return '☁'
+}
+
 const NAVIGATION_ITEMS = [
   { id: 'AGENT', label: 'Agent', icon: 'agent' },
   { id: 'MEMORY', label: 'Memory', icon: 'memory' },
@@ -193,15 +211,36 @@ function hasStoredCoordinates(config = {}) {
   ))
 }
 
+function hasWebGLRenderer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') {
+    return false
+  }
+
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(
+      canvas.getContext('webgl2') ||
+      canvas.getContext('webgl')
+    )
+  } catch {
+    return false
+  }
+}
+
 function Brain3D({ onSelect }) {
   const mountRef = useRef(null)
   const animationRef = useRef(0)
+  const [renderUnavailable, setRenderUnavailable] = useState(() => !hasWebGLRenderer())
 
   useEffect(() => {
+    if (renderUnavailable) {
+      return undefined
+    }
+
     const mount = mountRef.current
 
     if (!mount) {
-      return
+      return undefined
     }
 
     const scene = new THREE.Scene()
@@ -233,13 +272,25 @@ function Brain3D({ onSelect }) {
       8.8
     )
 
-    const renderer =
-      new THREE.WebGLRenderer({
+    let renderer
+
+    try {
+      renderer =
+        new THREE.WebGLRenderer({
         antialias: true,
         alpha: true,
         powerPreference:
           "high-performance",
-      })
+        })
+    } catch {
+      /*
+       * WebGL can be disabled by a remote desktop session, an accessibility
+       * browser, or a machine policy. The rest of ULTRON must remain usable
+       * when its decorative 3D visualizer is unavailable.
+       */
+      const retryTimer = window.setTimeout(() => setRenderUnavailable(true), 0)
+      return () => window.clearTimeout(retryTimer)
+    }
 
     renderer.setPixelRatio(
       Math.min(
@@ -2741,7 +2792,29 @@ function Brain3D({ onSelect }) {
         )
       }
     }
-  }, [onSelect])
+  }, [onSelect, renderUnavailable])
+
+  if (renderUnavailable) {
+    return (
+      <div
+        className="brain-renderer brain-renderer-fallback"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="brain-fallback-signal" aria-hidden="true">
+          <i />
+          <i />
+          <i />
+        </div>
+        <span>NEURAL VISUALIZER STANDBY</span>
+        <strong>3D GRAPHICS ARE UNAVAILABLE</strong>
+        <p>
+          ULTRON remains available. You can use Agent, Memory, Devices and
+          Settings while this environment has no WebGL renderer.
+        </p>
+      </div>
+    )
+  }
 
   return (
     <div
@@ -4299,20 +4372,24 @@ function App({ user = null, onLogout = () => {} }) {
       const result =
         await response.json()
 
-      if (!result.ok) {
-        alert(
-          result.error ||
-            'Errore Obsidian'
-        )
-
-        return
+      if (!response.ok || !result.ok) {
+        return {
+          ok: false,
+          error: result.error || result.detail || 'Obsidian could not connect to this vault.',
+        }
       }
 
       await loadObsidian()
+
+      return {
+        ok: true,
+        message: result.message || 'Obsidian vault connected for this local account.',
+      }
     } catch {
-      alert(
-        'Backend ULTRON non disponibile.'
-      )
+      return {
+        ok: false,
+        error: 'The ULTRON Core is unavailable. Restart ULTRON and try again.',
+      }
     }
   }
 

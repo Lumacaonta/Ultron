@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
@@ -37,6 +37,17 @@ function isCoordinate(value, lower, upper) {
 
 function hasCoordinates(latitude, longitude) {
   return isCoordinate(latitude, -90, 90) && isCoordinate(longitude, -180, 180)
+}
+
+function hasWebGLRenderer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false
+
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+  } catch {
+    return false
+  }
 }
 
 function latLonVector(latitude, longitude, radius = GLOBE_RADIUS) {
@@ -200,6 +211,7 @@ function disposeObject(root) {
 export default function GlobalPositionGlobe({ latitude, longitude, label, active = false }) {
   const containerRef = useRef(null)
   const runtimeRef = useRef(null)
+  const [renderUnavailable, setRenderUnavailable] = useState(() => !hasWebGLRenderer())
   const centerMarker = useCallback(() => {
     const runtime = runtimeRef.current
     if (!runtime || !hasCoordinates(latitude, longitude)) return
@@ -216,13 +228,25 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
   }, [latitude, longitude])
 
   useEffect(() => {
+    if (renderUnavailable) return undefined
+
     const container = containerRef.current
     if (!container) return undefined
 
     const scene = new THREE.Scene()
     const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50)
     camera.position.set(0, 0.25, 7.8)
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+    let renderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+    } catch {
+      /*
+       * Position selection must remain accessible when a remote desktop,
+       * browser policy, or older GPU cannot create a WebGL context.
+       */
+      const retryTimer = window.setTimeout(() => setRenderUnavailable(true), 0)
+      return () => window.clearTimeout(retryTimer)
+    }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     renderer.outputColorSpace = THREE.SRGBColorSpace
     renderer.toneMapping = THREE.ACESFilmicToneMapping
@@ -389,7 +413,7 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
       renderer.domElement.remove()
       runtimeRef.current = null
     }
-  }, [])
+  }, [renderUnavailable])
 
   useEffect(() => {
     const runtime = runtimeRef.current
@@ -420,7 +444,10 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
   return (
     <div
       ref={containerRef}
-      className="global-position-globe"
+      className={[
+        'global-position-globe',
+        renderUnavailable ? 'global-position-globe-fallback' : '',
+      ].filter(Boolean).join(' ')}
       aria-label={`World position: ${displayLabel}`}
       style={{ position: 'relative', minHeight: 280, width: '100%', overflow: 'hidden' }}
     >
@@ -428,19 +455,37 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
         <span>GLOBAL POSITION</span>
         <strong>{displayLabel}</strong>
       </div>
-      <button
-        type="button"
-        className="global-position-center"
-        onClick={centerMarker}
-        disabled={!valid}
-        aria-label="Center the selected position on the globe"
-      >
-        CENTER MARKER
-      </button>
-      <div className="global-position-globe-readout global-position-globe-readout-bottom">
-        <i aria-hidden="true" />
-        {active && valid ? 'POSITION LOCKED · DRAG TO EXPLORE' : 'SEARCH OR USE YOUR DEVICE POSITION'}
-      </div>
+      {renderUnavailable ? (
+        <div className="global-position-fallback-message" role="status">
+          <i aria-hidden="true" />
+          <strong>MAP VISUALIZER STANDBY</strong>
+          <span>
+            {valid
+              ? 'POSITION SAVED · ' + Number(latitude).toFixed(4) + '°, ' + Number(longitude).toFixed(4) + '°'
+              : 'SEARCH FOR A PLACE OR ENTER COORDINATES'}
+          </span>
+          <p>
+            The selected position can still be saved and used for weather.
+            This environment does not provide 3D graphics.
+          </p>
+        </div>
+      ) : (
+        <>
+          <button
+            type="button"
+            className="global-position-center"
+            onClick={centerMarker}
+            disabled={!valid}
+            aria-label="Center the selected position on the globe"
+          >
+            CENTER MARKER
+          </button>
+          <div className="global-position-globe-readout global-position-globe-readout-bottom">
+            <i aria-hidden="true" />
+            {active && valid ? 'POSITION LOCKED · DRAG TO EXPLORE' : 'SEARCH OR USE YOUR DEVICE POSITION'}
+          </div>
+        </>
+      )}
     </div>
   )
 }

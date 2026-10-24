@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
@@ -72,6 +72,55 @@ function formatTriangles(value) {
   const number = Number(value)
   if (!Number.isFinite(number)) return '—'
   return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(number)
+}
+
+function hasWebGLRenderer() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return false
+
+  try {
+    const canvas = document.createElement('canvas')
+    return Boolean(canvas.getContext('webgl2') || canvas.getContext('webgl'))
+  } catch {
+    return false
+  }
+}
+
+function ModelDeckPreviewUnavailable({ asset, detail }) {
+  return (
+    <div className="model-deck-viewport model-deck-renderer-fallback" role="status" aria-live="polite">
+      <div className="model-deck-viewport-corners" aria-hidden="true"><i /><i /><i /><i /></div>
+      <div className="model-deck-empty-state">
+        <span>LOCAL VISUALIZATION CONTINUES</span>
+        <strong>3D PREVIEW STANDBY</strong>
+        <small>{detail || (asset
+          ? 'This file is catalogued. Its details, selected software and safe handoff controls remain available.'
+          : 'Select a file to catalogue it and open it with a compatible local application.')}</small>
+      </div>
+    </div>
+  )
+}
+
+class ModelDeckPreviewBoundary extends Component {
+  constructor(props) {
+    super(props)
+    this.state = { failed: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+
+  componentDidCatch() {
+    this.props.onRendererUnavailable?.()
+  }
+
+  render() {
+    if (this.state.failed) {
+      return <ModelDeckPreviewUnavailable asset={this.props.asset} detail="The 3D preview could not start here. Your file catalogue and handoff controls are still ready." />
+    }
+
+    return this.props.children
+  }
 }
 
 function responseMessage(payload, fallback) {
@@ -532,18 +581,27 @@ function makePreviewModel(source) {
   return root
 }
 
-function ModelViewport({ model, asset, loading, preview, resetToken }) {
+function ModelViewport({ model, asset, loading, preview, resetToken, rendererAvailable, onRendererUnavailable }) {
   const mountRef = useRef(null)
 
   useEffect(() => {
+    if (!rendererAvailable) return undefined
+
     const mount = mountRef.current
     if (!mount) return undefined
+
+    let renderer
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+    } catch {
+      window.setTimeout(() => onRendererUnavailable?.(), 0)
+      return undefined
+    }
 
     const scene = new THREE.Scene()
     scene.fog = new THREE.FogExp2(0x050306, 0.085)
     const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 80)
     camera.position.set(5.5, 3.6, 8.2)
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     renderer.setClearColor(0x050306, 0)
     renderer.outputColorSpace = THREE.SRGBColorSpace
@@ -609,10 +667,10 @@ function ModelViewport({ model, asset, loading, preview, resetToken }) {
     })
     scene.add(rings)
 
-    let preview = null
+    let previewModel = null
     if (model) {
-      preview = makePreviewModel(model)
-      scene.add(preview)
+      previewModel = makePreviewModel(model)
+      scene.add(previewModel)
     }
 
     const resize = () => {
@@ -621,7 +679,7 @@ function ModelViewport({ model, asset, loading, preview, resetToken }) {
       renderer.setSize(width, height, false)
       camera.aspect = width / height
       camera.updateProjectionMatrix()
-      updateWideLineResolution(preview, width, height)
+      updateWideLineResolution(previewModel, width, height)
     }
     const observer = new ResizeObserver(resize)
     observer.observe(mount)
@@ -644,7 +702,7 @@ function ModelViewport({ model, asset, loading, preview, resetToken }) {
       cancelAnimationFrame(frame)
       observer.disconnect()
       controls.dispose()
-      if (preview) disposeObject(preview)
+      if (previewModel) disposeObject(previewModel)
       floor.geometry.dispose()
       floor.material.dispose()
       grid.geometry.dispose()
@@ -656,7 +714,11 @@ function ModelViewport({ model, asset, loading, preview, resetToken }) {
       renderer.dispose()
       renderer.domElement.remove()
     }
-  }, [model, resetToken])
+  }, [model, onRendererUnavailable, rendererAvailable, resetToken])
+
+  if (!rendererAvailable) {
+    return <ModelDeckPreviewUnavailable asset={asset} />
+  }
 
   return (
     <div className="model-deck-viewport" ref={mountRef}>
@@ -720,9 +782,9 @@ function FormatCatalogue() {
   )
 }
 
-function AssetPreviewState({ asset, model, preview }) {
+function AssetPreviewState({ asset, model, preview, rendererAvailable }) {
   if (!asset) return 'AWAITING INPUT'
-  if (model) return 'LIVE PREVIEW READY'
+  if (model && rendererAvailable) return 'LIVE PREVIEW READY'
   if (preview?.mode === 'failed') return 'PREVIEW UNAVAILABLE'
   return 'METADATA VIEW ACTIVE'
 }
@@ -747,11 +809,13 @@ export default function ModelDeckPage({
   const [error, setError] = useState('')
   const [resetToken, setResetToken] = useState(0)
   const [preview, setPreview] = useState({ mode: 'empty', reason: '' })
+  const [rendererAvailable, setRendererAvailable] = useState(() => hasWebGLRenderer())
   const [externalApps, setExternalApps] = useState([])
   const [appsLoading, setAppsLoading] = useState(false)
   const [appsError, setAppsError] = useState('')
   const [selectedAppId, setSelectedAppId] = useState('')
   const [softwareLabel, setSoftwareLabel] = useState('')
+  const markRendererUnavailable = useCallback(() => setRendererAvailable(false), [])
 
   useEffect(() => () => disposeObject(model), [model])
 
@@ -1020,13 +1084,13 @@ export default function ModelDeckPage({
 
     return [
       { label: 'FORMAT', value: asset ? asset.format || `.${asset.extension.toUpperCase()}` : '—', detail: asset ? 'LOCAL CATALOGUE' : 'NO ASSET' },
-      { label: 'VIEW MODE', value: model ? 'LIVE' : asset ? 'METADATA' : '—', detail: model ? 'INTERACTIVE INSPECTION' : metadataMode ? 'NATIVE APP HANDOFF' : 'AWAITING INPUT' },
+      { label: 'VIEW MODE', value: model && rendererAvailable ? 'LIVE' : asset ? 'METADATA' : '—', detail: model && rendererAvailable ? 'INTERACTIVE INSPECTION' : metadataMode ? 'NATIVE APP HANDOFF' : 'AWAITING INPUT' },
       toolpath
         ? { label: 'PATH SEGMENTS', value: formatTriangles(pathCount), detail: pathCount ? 'FABRICATION ROUTES' : 'READ ON OPEN' }
         : { label: 'MESH DATA', value: formatTriangles(meshCount), detail: meshCount ? 'LOCAL MODEL FACTS' : asset ? 'NATIVE APP ANALYSIS' : 'AWAITING SCAN' },
       { label: 'FILE SIZE', value: formatBytes(asset?.size), detail: asset?.modified ? 'LOCAL STORAGE' : 'NO ASSET' },
     ]
-  }, [asset, model, stats])
+  }, [asset, model, rendererAvailable, stats])
 
   return (
     <section className="model-deck" aria-label="ULTRON fabrication model deck">
@@ -1055,21 +1119,31 @@ export default function ModelDeckPage({
               <strong>{asset?.name || 'NO GEOMETRY LOADED'}</strong>
             </div>
             <div className="model-deck-hero-tools">
-              {asset && <span className="model-deck-preview-state" data-mode={preview.mode}>{model ? 'LIVE PREVIEW' : 'METADATA VIEW'}</span>}
+              {asset && <span className="model-deck-preview-state" data-mode={preview.mode}>{model && rendererAvailable ? 'LIVE PREVIEW' : 'METADATA VIEW'}</span>}
               <button
                 type="button"
                 className="model-deck-reset-view"
                 onClick={() => setResetToken(token => token + 1)}
-                disabled={!model}
+                disabled={!model || !rendererAvailable}
               >
                 RESET OPTICS
               </button>
             </div>
           </div>
-          <ModelViewport model={model} asset={asset} loading={loading} preview={preview} resetToken={resetToken} />
+          <ModelDeckPreviewBoundary asset={asset} onRendererUnavailable={markRendererUnavailable}>
+            <ModelViewport
+              model={model}
+              asset={asset}
+              loading={loading}
+              preview={preview}
+              resetToken={resetToken}
+              rendererAvailable={rendererAvailable}
+              onRendererUnavailable={markRendererUnavailable}
+            />
+          </ModelDeckPreviewBoundary>
           <div className="model-deck-hero-footer">
-            <span>{model ? 'ROTATE // INSPECT // ZOOM' : 'CATALOGUE // HANDOFF // INSPECT'}</span>
-            <span><AssetPreviewState asset={asset} model={model} preview={preview} /></span>
+            <span>{model && rendererAvailable ? 'ROTATE // INSPECT // ZOOM' : 'CATALOGUE // HANDOFF // INSPECT'}</span>
+            <span><AssetPreviewState asset={asset} model={model} preview={preview} rendererAvailable={rendererAvailable} /></span>
           </div>
         </section>
 

@@ -14,6 +14,8 @@ const SECTIONS = [
 const LOCATION_QUERY_MIN_LENGTH = 2
 
 function isCoordinate(value, minimum, maximum) {
+  if (value === '' || value === null || value === undefined) return false
+
   const numeric = Number(value)
   return Number.isFinite(numeric) && numeric >= minimum && numeric <= maximum
 }
@@ -155,6 +157,8 @@ export default function SettingsPage({
 }) {
   const [activeSection, setActiveSection] = useState('general')
   const [skills, setSkills] = useState([])
+  const [obsidianFeedback, setObsidianFeedback] = useState('')
+  const [obsidianFeedbackTone, setObsidianFeedbackTone] = useState('success')
   const [skillsLoading, setSkillsLoading] = useState(false)
   const [skillsError, setSkillsError] = useState('')
   const [showSkillEditor, setShowSkillEditor] = useState(false)
@@ -345,6 +349,24 @@ export default function SettingsPage({
     setLocationResults([])
     setSelectedLocation(null)
     setLocationFeedback('Position saved to this local account. Weather telemetry is updating.')
+  }
+
+  async function saveVault() {
+    setObsidianFeedback('')
+
+    try {
+      const result = await saveObsidian()
+
+      if (!result?.ok) {
+        throw new Error(result?.error || 'Obsidian could not connect to this vault.')
+      }
+
+      setObsidianFeedbackTone('success')
+      setObsidianFeedback(result.message || 'Obsidian vault connected for this local account.')
+    } catch (error) {
+      setObsidianFeedbackTone('error')
+      setObsidianFeedback(error?.message || 'Obsidian could not connect to this vault.')
+    }
   }
 
   async function loadSkills() {
@@ -786,11 +808,16 @@ export default function SettingsPage({
             <input className="settings-input" value={obsidianPath} onChange={event => setObsidianPath(event.target.value)} placeholder="Select your local Obsidian vault" />
           </div>
           <div className="settings-actions">
-            <button type="button" className="settings-primary" onClick={saveObsidian}>SAVE VAULT</button>
+            <button type="button" className="settings-primary" onClick={() => void saveVault()}>SAVE VAULT</button>
             <span className={`settings-status ${obsidianStatus?.connected ? 'online' : ''}`}>
               {obsidianStatus?.connected ? `● ${obsidianStatus.markdown_count} NOTES` : '○ NOT CONNECTED'}
             </span>
           </div>
+          {obsidianFeedback && (
+            <p className={`settings-feedback ${obsidianFeedbackTone === 'error' ? 'settings-error' : ''}`} role="status" aria-live="polite">
+              {obsidianFeedback}
+            </p>
+          )}
         </SettingsCard>
         <SettingsCard title="Hardware" kicker="LOCAL DEVICES">
           <SettingRow title="Mac telemetry" description="CPU, memory, disk and network are read locally.">
@@ -878,7 +905,7 @@ export default function SettingsPage({
                   <small>COMMAND · {skill.trigger || '—'}</small>
                 </div>
                 <div className="skill-card-actions">
-                  <button type="button" className="skill-edit" onClick={() => editSkill(skill)}>EDIT</button>
+                  {!skill.builtin && <button type="button" className="skill-edit" onClick={() => editSkill(skill)}>EDIT</button>}
                   <Toggle label={`Enable ${skill.name}`} value={Boolean(skill.enabled)} onChange={value => updateSkill(skill, { enabled: value })} />
                   {!skill.builtin && <button type="button" className="skill-delete" onClick={() => deleteSkill(skill)}>DELETE</button>}
                 </div>

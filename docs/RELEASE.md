@@ -33,6 +33,14 @@ containing ULTRON ai.app and an Applications shortcut; drag the app to
 Applications, then open it normally. The ZIP remains available for portable
 installation or independent archive checks.
 
+To verify a completed release archive, run the checksum command from its
+release folder so the manifest can resolve the DMG and ZIP names:
+
+~~~bash
+cd desktop/release
+shasum -a 256 -c ULTRON-ai-<version>-macos-arm64-SHA256SUMS.txt
+~~~
+
 A person who downloads the DMG does not need Node.js, Python, Git or a
 `backend/.env` file. The packaged app includes its interface and local core.
 After the person creates a local account, the in-app Quick Tour introduces

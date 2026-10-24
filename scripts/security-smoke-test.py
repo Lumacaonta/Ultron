@@ -382,6 +382,20 @@ def _check_backend(temp_root: Path) -> None:
         )
         assert status == 200 and configured.get("ok")
 
+        # A normal question must never silently become a memory proposal.
+        status, _headers, ordinary_question = _api(
+            port,
+            "POST",
+            "/api/agent",
+            payload={"message": "Quanto fa 1 + 1?"},
+            headers=account_a_headers,
+        )
+        assert status == 200
+        assert ordinary_question.get("action") != "memory_proposal"
+        assert not ordinary_question.get("memory_proposal")
+
+        # A request to remember something creates a reviewable proposal, but
+        # only the account that created it can later confirm the memory.
         status, _headers, agent = _api(
             port,
             "POST",
@@ -409,6 +423,45 @@ def _check_backend(temp_root: Path) -> None:
             headers=account_a_headers,
         )
         assert status == 200 and created_skill.get("skill", {}).get("id")
+
+        # A custom skill must stay within the action types exposed by Settings.
+        # Built-in skills keep their trusted action implementation even if a
+        # client submits different editable fields.
+        status, _headers, rejected_skill = _api(
+            port,
+            "POST",
+            "/api/skills",
+            payload={
+                "name": "Unsupported test skill",
+                "description": "Must not become a pending automation.",
+                "trigger": "unsupported test command",
+                "action": "lights",
+                "target": "",
+                "enabled": True,
+            },
+            headers=account_a_headers,
+        )
+        assert status == 422 and "supported action" in str(rejected_skill).casefold()
+
+        status, _headers, protected_builtin = _api(
+            port,
+            "PATCH",
+            "/api/skills/email",
+            payload={
+                "name": "Altered email",
+                "description": "This must not overwrite a built-in action.",
+                "trigger": "altered email trigger",
+                "action": "open_app",
+                "target": "Finder",
+                "enabled": False,
+            },
+            headers=account_a_headers,
+        )
+        protected_skill = protected_builtin.get("skill", {})
+        assert status == 200
+        assert protected_skill.get("action") == "email"
+        assert protected_skill.get("trigger") == "controlla email"
+        assert protected_skill.get("enabled") is False
 
         status, _headers, second = _api(
             port,
