@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="frontend/public/ultron-mark.jpg" width="132" alt="ULTRON mark" />
+  <img src="frontend/public/ultron-mark.png" width="132" alt="ULTRON mark" />
 </p>
 
 <h1 align="center">ULTRON</h1>
