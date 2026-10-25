@@ -57,6 +57,16 @@ jobs:
             frontend/package-lock.json
             desktop/package-lock.json
 
+      - name: Check native architecture
+        run: |
+          test "$(uname -m)" = "arm64"
+          test "$(node -p 'process.arch')" = "arm64"
+          test "$(python3 - <<'PYTHON'
+          import platform
+          print(platform.machine())
+          PYTHON
+          )" = "arm64"
+
       - name: Import Developer ID certificate
         if: inputs.notarize
         env:
@@ -85,7 +95,10 @@ jobs:
           security list-keychain -d user -s build.keychain login.keychain-db
           security set-key-partition-list -S apple-tool:,apple: \
             -k "$KEYCHAIN_PASSWORD" build.keychain
-          rm -f certificate.p12
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          Path("certificate.p12").unlink(missing_ok=True)
+          PYTHON
 
       - name: Install dependencies
         run: ./scripts/bootstrap.sh
@@ -98,6 +111,7 @@ jobs:
           backend/.venv/bin/python scripts/location-lookup-test.py
           backend/.venv/bin/python scripts/fabrication-integration-test.py
           node --check desktop/main.cjs
+          node --check desktop/preload.cjs
           node --check desktop/forge.config.cjs
           npm --prefix frontend run lint
 
@@ -106,7 +120,7 @@ jobs:
           ULTRON_NOTARIZE: ${{ inputs.notarize && '1' || '0' }}
         run: ./scripts/release-macos-arm64.sh
 
-      - name: Publish GitHub Release
+      - name: Publish GitHub Release assets
         env:
           TAG: ${{ inputs.release_tag }}
           PRE_RELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
@@ -118,27 +132,42 @@ jobs:
           DMG_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-arm64.dmg"
           DMG_CHECKSUM="$DMG_ARCHIVE.sha256"
           CHECKSUM_MANIFEST="desktop/release/ULTRON-ai-$VERSION-macos-arm64-SHA256SUMS.txt"
+          ASSETS=(
+            "$DMG_ARCHIVE" "$DMG_CHECKSUM"
+            "$ZIP_ARCHIVE" "$ZIP_CHECKSUM"
+            "$CHECKSUM_MANIFEST"
+          )
           if [[ "$PRE_RELEASE" == "true" ]]; then
             PRE_RELEASE_ARGUMENT=(--prerelease)
           else
             PRE_RELEASE_ARGUMENT=()
           fi
           if [[ "$NOTARIZED" == "true" ]]; then
-            NOTES_FILE=".github/release-notes/macos-arm64.md"
+            NOTES_FILE=".github/release-notes/cross-platform-official.md"
           else
-            NOTES_FILE=".github/release-notes/macos-arm64-preview.md"
+            NOTES_FILE=".github/release-notes/cross-platform-candidate.md"
           fi
-          gh release create "$TAG" \
-            "$DMG_ARCHIVE" "$DMG_CHECKSUM" \
-            "$ZIP_ARCHIVE" "$ZIP_CHECKSUM" \
-            "$CHECKSUM_MANIFEST" \
-            --target "$GITHUB_SHA" \
-            --title "ULTRON $VERSION — macOS Apple Silicon" \
-            --notes-file "$NOTES_FILE" \
-            "${PRE_RELEASE_ARGUMENT[@]}"
+          if EXISTING_PRE_RELEASE="$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease' 2>/dev/null)"; then
+            if [[ "$EXISTING_PRE_RELEASE" != "$PRE_RELEASE" ]]; then
+              echo "Existing release visibility does not match this workflow input." >&2
+              echo "Use a new tag when moving from a candidate to a normal release." >&2
+              exit 1
+            fi
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" \
+              "${ASSETS[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "ULTRON $VERSION" \
+              --notes-file "$NOTES_FILE" \
+              "${PRE_RELEASE_ARGUMENT[@]}"
+          fi
 
       - name: Remove temporary keychain
         if: always()
         run: |
           security delete-keychain build.keychain || true
-          rm -f certificate.p12
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          Path("certificate.p12").unlink(missing_ok=True)
+          PYTHON

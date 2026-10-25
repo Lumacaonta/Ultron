@@ -1,0 +1,174 @@
+name: Publish signed macOS Intel release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: GitHub release tag, for example v1.2.1
+        required: true
+        type: string
+      prerelease:
+        description: Mark the GitHub Release as a pre-release
+        required: true
+        default: true
+        type: boolean
+      notarize:
+        description: Sign and notarize with the configured Apple secrets
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    # Intel packaging must run on an Intel Mac. The bundled PyInstaller core
+    # cannot be cross-compiled from Apple Silicon.
+    runs-on: macos-15-intel
+    timeout-minutes: 55
+    env:
+      GH_TOKEN: ${{ github.token }}
+      ULTRON_ARCH: x64
+      ULTRON_CODESIGN_IDENTITY: ${{ inputs.notarize && secrets.ULTRON_CODESIGN_IDENTITY || '-' }}
+      ULTRON_APPLE_ID: ${{ secrets.ULTRON_APPLE_ID }}
+      ULTRON_APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.ULTRON_APPLE_APP_SPECIFIC_PASSWORD }}
+      ULTRON_APPLE_TEAM_ID: ${{ secrets.ULTRON_APPLE_TEAM_ID }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # An unsigned / ad-hoc build must never be presented as a normal public
+      # release. Keep it a candidate until the Apple signing path succeeds.
+      - name: Validate release visibility
+        if: ${{ !inputs.notarize && !inputs.prerelease }}
+        run: |
+          echo "A non-notarized macOS build can only be published as a pre-release." >&2
+          exit 1
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Check native architecture
+        run: |
+          test "$(uname -m)" = "x86_64"
+          test "$(node -p 'process.arch')" = "x64"
+          test "$(python3 - <<'PYTHON'
+          import platform
+          print(platform.machine())
+          PYTHON
+          )" = "x86_64"
+
+      - name: Import Developer ID certificate
+        if: inputs.notarize
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.ULTRON_MACOS_CERTIFICATE_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.ULTRON_MACOS_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.ULTRON_MACOS_KEYCHAIN_PASSWORD }}
+        run: |
+          test -n "$CERTIFICATE_BASE64"
+          test -n "$CERTIFICATE_PASSWORD"
+          test -n "$KEYCHAIN_PASSWORD"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          security set-keychain-settings -lut 21600 build.keychain
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
+          python3 - <<'PYTHON'
+          import base64
+          import os
+          from pathlib import Path
+          Path("certificate.p12").write_bytes(
+              base64.b64decode(os.environ["CERTIFICATE_BASE64"])
+          )
+          PYTHON
+          security import certificate.p12 \
+            -k build.keychain \
+            -P "$CERTIFICATE_PASSWORD" \
+            -T /usr/bin/codesign
+          security list-keychain -d user -s build.keychain login.keychain-db
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" build.keychain
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          Path("certificate.p12").unlink(missing_ok=True)
+          PYTHON
+
+      - name: Install dependencies
+        run: ./scripts/bootstrap.sh
+
+      - name: Verify source and security boundaries
+        run: |
+          python scripts/repository-hygiene.py
+          backend/.venv/bin/python -m py_compile backend/auth.py backend/email_service.py backend/external_apps.py backend/launcher.py backend/main.py backend/memory.py backend/printer_service.py backend/research.py backend/skills_api.py backend/skills_engine.py
+          backend/.venv/bin/python scripts/security-smoke-test.py
+          backend/.venv/bin/python scripts/location-lookup-test.py
+          backend/.venv/bin/python scripts/fabrication-integration-test.py
+          node --check desktop/main.cjs
+          node --check desktop/preload.cjs
+          node --check desktop/forge.config.cjs
+          npm --prefix frontend run lint
+
+      - name: Build, verify and archive
+        env:
+          ULTRON_NOTARIZE: ${{ inputs.notarize && '1' || '0' }}
+        run: ./scripts/release-macos-x64.sh
+
+      - name: Publish GitHub Release assets
+        env:
+          TAG: ${{ inputs.release_tag }}
+          PRE_RELEASE: ${{ inputs.prerelease && 'true' || 'false' }}
+          NOTARIZED: ${{ inputs.notarize && 'true' || 'false' }}
+        run: |
+          VERSION="$(node -p "require('./desktop/package.json').version")"
+          ZIP_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-x64.zip"
+          ZIP_CHECKSUM="$ZIP_ARCHIVE.sha256"
+          DMG_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-x64.dmg"
+          DMG_CHECKSUM="$DMG_ARCHIVE.sha256"
+          CHECKSUM_MANIFEST="desktop/release/ULTRON-ai-$VERSION-macos-x64-SHA256SUMS.txt"
+          ASSETS=(
+            "$DMG_ARCHIVE" "$DMG_CHECKSUM"
+            "$ZIP_ARCHIVE" "$ZIP_CHECKSUM"
+            "$CHECKSUM_MANIFEST"
+          )
+          if [[ "$PRE_RELEASE" == "true" ]]; then
+            PRE_RELEASE_ARGUMENT=(--prerelease)
+          else
+            PRE_RELEASE_ARGUMENT=()
+          fi
+          if [[ "$NOTARIZED" == "true" ]]; then
+            NOTES_FILE=".github/release-notes/cross-platform-official.md"
+          else
+            NOTES_FILE=".github/release-notes/cross-platform-candidate.md"
+          fi
+          if EXISTING_PRE_RELEASE="$(gh release view "$TAG" --json isPrerelease --jq '.isPrerelease' 2>/dev/null)"; then
+            if [[ "$EXISTING_PRE_RELEASE" != "$PRE_RELEASE" ]]; then
+              echo "Existing release visibility does not match this workflow input." >&2
+              echo "Use a new tag when moving from a candidate to a normal release." >&2
+              exit 1
+            fi
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
+          else
+            gh release create "$TAG" \
+              "${ASSETS[@]}" \
+              --target "$GITHUB_SHA" \
+              --title "ULTRON $VERSION" \
+              --notes-file "$NOTES_FILE" \
+              "${PRE_RELEASE_ARGUMENT[@]}"
+          fi
+
+      - name: Remove temporary keychain
+        if: always()
+        run: |
+          security delete-keychain build.keychain || true
+          python3 - <<'PYTHON'
+          from pathlib import Path
+          Path("certificate.p12").unlink(missing_ok=True)
+          PYTHON

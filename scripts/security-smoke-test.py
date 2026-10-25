@@ -159,6 +159,7 @@ def _check_mail_code_and_tls(temp_root: Path) -> None:
 def _check_backend(temp_root: Path) -> None:
     port = _free_port()
     launch_secret = "capability-" + ("a" * 64)
+    picker_secret = "desktop-picker-" + ("p" * 64)
     instance_id = "security-smoke-instance"
     app_data = temp_root / "api-auth-data"
     environment = {
@@ -169,6 +170,7 @@ def _check_backend(temp_root: Path) -> None:
         "ULTRON_PORT": str(port),
         "ULTRON_LAUNCH_SECRET": launch_secret,
         "ULTRON_LAUNCH_INSTANCE_ID": instance_id,
+        "ULTRON_DESKTOP_PICKER_SECRET": picker_secret,
         "ULTRON_ENABLE_API_DOCS": "false",
     }
     process = subprocess.Popen(
@@ -223,9 +225,11 @@ def _check_backend(temp_root: Path) -> None:
         )
         assert status == 200
         assert cors_headers.get("access-control-allow-origin") == "ultron://app"
-        assert "x-ultron-launch-secret" in cors_headers.get(
-            "access-control-allow-headers", ""
-        ).lower()
+        allowed_headers = cors_headers.get("access-control-allow-headers", "").lower()
+        assert "x-ultron-launch-secret" in allowed_headers
+        # The Electron main process is the only holder of this secret. It must
+        # never become a CORS header available to the renderer.
+        assert "x-ultron-desktop-picker" not in allowed_headers
 
         status, evil_headers, _payload = _api(
             port,
@@ -239,6 +243,21 @@ def _check_backend(temp_root: Path) -> None:
         )
         assert status == 400
         assert "access-control-allow-origin" not in evil_headers
+
+        # Even ULTRON's renderer origin cannot ask the browser to send the
+        # native-only picker secret. Electron main uses it directly over
+        # loopback, outside the renderer's CORS surface.
+        status, _headers, _payload = _api(
+            port,
+            "OPTIONS",
+            "/api/models/register",
+            headers={
+                "Origin": "ultron://app",
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type,x-ultron-launch-secret,x-ultron-desktop-picker",
+            },
+        )
+        assert status == 400
 
         status, _headers, _payload = _api(
             port,
@@ -336,6 +355,45 @@ def _check_backend(temp_root: Path) -> None:
 
         unselected_asset = temp_root / "unselected-asset.step"
         unselected_asset.write_text("ISO-10303-21;", encoding="utf-8")
+        picker_asset = temp_root / "picker-selected-asset.step"
+        picker_asset.write_text("ISO-10303-21;", encoding="utf-8")
+
+        # File and application registration accepts an arbitrary local path
+        # only when Electron main has proved it came from the native picker.
+        # The per-launch picker secret is deliberately absent from browser CORS
+        # and is never supplied by the ordinary renderer request headers.
+        status, _headers, picker_denied = _api(
+            port,
+            "POST",
+            "/api/models/register",
+            payload={"path": str(picker_asset)},
+            headers=account_a_headers,
+        )
+        assert status == 403 and "verified" in str(picker_denied).casefold()
+
+        native_picker_headers = {
+            **account_a_headers,
+            "X-Ultron-Desktop-Picker": picker_secret,
+        }
+        status, _headers, picker_registered = _api(
+            port,
+            "POST",
+            "/api/models/register",
+            payload={"path": str(picker_asset)},
+            headers=native_picker_headers,
+        )
+        assert status == 200
+        assert picker_registered.get("file", {}).get("name") == picker_asset.name
+
+        status, _headers, app_picker_denied = _api(
+            port,
+            "POST",
+            "/api/models/apps/register",
+            payload={"path": str(unselected_asset), "label": "Unsafe test app"},
+            headers=account_a_headers,
+        )
+        assert status == 403 and "verified" in str(app_picker_denied).casefold()
+
         status, _headers, handoff_denied = _api(
             port,
             "POST",

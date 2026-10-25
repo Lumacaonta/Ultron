@@ -1,9 +1,10 @@
-"""Local integration with the macOS Mail application.
+"""Local integration with macOS Mail and the system mail/browser handlers.
 
 Mail data is queried only by a user-triggered request.  Outbound mail is
 prepared as a visible ULTRON review card and is transmitted only after the
 user presses its explicit Send control.  Gmail authentication remains owned
-by macOS Internet Accounts and Mail.app.
+by macOS Internet Accounts and Mail.app. Windows can open Gmail or a reviewed
+``mailto:`` draft in the person's own browser or default mail application.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import platform
 import re
 import shutil
 import subprocess
+import webbrowser
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote, urlencode
@@ -334,12 +336,7 @@ def get_unread_messages(
 
 
 def open_email(provider: str = "mail") -> dict[str, Any]:
-    """Open Mail.app or Gmail; neither action reads or sends messages."""
-
-    if not _is_macos():
-        raise EmailServiceError(
-            "Mail integration is available only on macOS."
-        )
+    """Open local Mail or Gmail; neither action reads or sends messages."""
 
     target = (provider or "mail").strip().lower()
 
@@ -349,13 +346,38 @@ def open_email(provider: str = "mail") -> dict[str, Any]:
         )
 
     if target == "mail":
-        if not _mail_app_available():
-            raise EmailServiceError(
-                "Mail.app is not installed on this Mac."
-            )
-        command = ["open", "-a", "Mail"]
-        label = "Mail"
+        if _is_macos():
+            if not _mail_app_available():
+                raise EmailServiceError(
+                    "Mail.app is not installed on this Mac."
+                )
+            command = ["open", "-a", "Mail"]
+            label = "Mail"
+        else:
+            try:
+                if not webbrowser.open("mailto:"):
+                    raise OSError("No default mail application is available.")
+            except OSError as error:
+                raise EmailServiceError(
+                    "Unable to open the default mail application."
+                ) from error
+            return {
+                "ok": True,
+                "provider": target,
+                "message": "Opening the default mail application.",
+            }
     else:
+        if not _is_macos():
+            try:
+                if not webbrowser.open_new_tab("https://mail.google.com"):
+                    raise OSError("No browser is available.")
+            except OSError as error:
+                raise EmailServiceError("Unable to open Gmail.") from error
+            return {
+                "ok": True,
+                "provider": target,
+                "message": "Opening Gmail in your browser.",
+            }
         command = ["open", "https://mail.google.com"]
         label = "Gmail"
 
@@ -386,9 +408,15 @@ def open_gmail_setup() -> dict[str, Any]:
     """
 
     if not _is_macos():
-        raise EmailServiceError(
-            "Gmail setup is available only on macOS."
-        )
+        try:
+            if not webbrowser.open_new_tab("https://accounts.google.com/"):
+                raise OSError("No browser is available.")
+        except OSError as error:
+            raise EmailServiceError("Unable to open Google sign-in.") from error
+        return {
+            "ok": True,
+            "message": "Google sign-in opened in your browser. Sign in to Gmail there, then return to ULTRON.",
+        }
 
     try:
         subprocess.Popen(
@@ -524,11 +552,6 @@ def compose_draft(
 ) -> dict[str, Any]:
     """Open a client-side draft using ``mailto:``; it never sends mail."""
 
-    if not _is_macos():
-        raise EmailServiceError(
-            "Mail integration is available only on macOS."
-        )
-
     safe_recipients = _normalise_recipients(recipients)
     safe_subject = str(subject or "").strip()
     safe_body = str(body or "")
@@ -557,15 +580,16 @@ def compose_draft(
     mailto_url = f"mailto:{recipient_path}?{query}"
 
     try:
-        subprocess.Popen(
-            ["open", mailto_url],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-        )
+        if _is_macos():
+            subprocess.Popen(
+                ["open", mailto_url],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        elif not webbrowser.open(mailto_url):
+            raise OSError("No default mail application is available.")
     except OSError as error:
-        raise EmailServiceError(
-            "Unable to open a mail draft."
-        ) from error
+        raise EmailServiceError("Unable to open a mail draft.") from error
 
     return {
         "ok": True,

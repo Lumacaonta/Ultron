@@ -1,41 +1,83 @@
 # Platform support
 
-ULTRON is released in phases so every download is built and tested for the
-platform it claims to support.
+ULTRON packages the React interface and local FastAPI core together. Every
+download must be built on a native runner for its operating system and CPU.
+This prevents a release from combining an Electron shell for one architecture
+with a Python core compiled for another.
 
-| Platform | Status | Download |
+| Platform | Package | Current release policy |
 | --- | --- | --- |
-| **macOS Apple Silicon** — M1, M2, M3 and later | First target. A final-candidate pre-release provides a standard drag-to-Applications DMG, a ZIP and checksums. A notarized official build needs the maintainer's Apple Developer credentials. | ULTRON-ai-*-macos-arm64.dmg |
-| **macOS Intel** | Planned after Apple Silicon. It needs a separate x64 Electron and PyInstaller build. | Not published |
-| **Windows** | Planned after macOS Intel. It needs native file/Cura/Mail integration, a Windows backend and a signed installer. | Not published |
-| **Linux** | Planned after Windows. It needs Linux integration adapters, package formats and testing. | Not published |
+| **macOS Apple Silicon** — M1, M2, M3, M4 and later | DMG, ZIP and SHA-256 manifest | Candidate packages can be published after native verification. A normal public release requires Developer ID signing and Apple notarization. |
+| **macOS Intel** — x86_64 | DMG, ZIP and SHA-256 manifest | Candidate packages are built separately on an Intel Mac runner. The same Developer ID and notarization requirement applies. |
+| **Windows x64** — 64-bit Windows 10 or Windows 11 | Setup EXE, ZIP and SHA-256 manifest | Candidate packages are built separately on Windows. A normal public release requires an Authenticode signature. |
+| **Linux** | None yet | Not published. It needs native desktop integrations, package formats and a separate validation pass. |
 
-## Apple Silicon final candidate
+The GitHub Releases page is the source of truth for published assets. An
+architecture is supported only when the matching asset is attached to that
+release and its native release workflow has completed successfully.
 
-The Apple Silicon candidate is built on an Apple Silicon GitHub-hosted macOS
-runner. It runs source, security and package checks, then includes a DMG
-installer, a ZIP and SHA-256 checksums. The DMG is the recommended download:
-open it and drag ULTRON ai.app to Applications.
+## Install the matching package
 
-The download already contains the desktop interface and local core. A person
-installing the DMG does not need Node.js, Python, Git or a developer `.env`
-file. After a local account is created, ULTRON shows its Quick Tour for the
-optional AI, Obsidian, Mail, device and privacy controls.
+### Mac with Apple Silicon
 
-Until it is signed with a Developer ID certificate and notarized by Apple,
-macOS may show a Gatekeeper warning. The preview is for testers who explicitly
-want to try ULTRON before the notarized release is available. It is a
-pre-release candidate, not an Apple-notarized official download.
+Download the file ending in **-macos-arm64.dmg**, open it and drag **ULTRON
+ai.app** into **Applications**. Do not download the Intel file for an M-series
+Mac.
 
-## Official macOS release
+### Mac with an Intel processor
 
-An official macOS direct download requires all of the following:
+Download the file ending in **-macos-x64.dmg**, open it and drag **ULTRON
+ai.app** into **Applications**. Do not download the Apple Silicon file for an
+Intel Mac.
 
-1. a **Developer ID Application** certificate;
-2. Hardened Runtime and the minimal entitlements in
-   [desktop/entitlements.mac.plist](../desktop/entitlements.mac.plist);
-3. Apple notarization and stapling;
-4. a successful spctl --assess result on the final ZIP's app;
-5. a fresh-account launch test on Apple Silicon.
+### Windows x64
 
-See [the release guide](RELEASE.md) for the build and GitHub Actions setup.
+Download the file ending in **-windows-x64-Setup.exe**. Run the installer and
+start **ULTRON ai** from the Start menu. The ZIP is portable: extract it into a
+folder you control, then start the included application. It does not update
+itself.
+
+All installers include the interface and local core. They do not need Node.js,
+Python, Git or a developer .env file. At first launch, create a local account
+and use the Quick Tour to enable only the integrations you want.
+
+## What works on every published desktop package
+
+- local accounts, password hashing and isolated local profiles;
+- local chat through an optional Ollama installation;
+- explicit memory proposals, Obsidian vault browsing and Model Deck catalogues;
+- a local loopback core protected by a per-launch desktop capability;
+- explicit printer profiles for a selected USB port or a selected private LAN
+  OctoPrint or Klipper/Moonraker endpoint;
+- checksum files for every published installer and portable archive.
+
+## Platform-specific integration status
+
+| Integration | macOS | Windows x64 |
+| --- | --- | --- |
+| UltiMaker Cura, Bambu Studio, OrcaSlicer, PrusaSlicer and linked local apps | Native handoff after an explicit action | Native handoff after an explicit action |
+| File selection and reveal | Native Finder action | Native Windows file picker and Explorer action |
+| Read-only USB, OctoPrint and Moonraker printer telemetry | Available after explicit configuration | Available after explicit configuration |
+| Inbox reading and reviewed sending through the platform mail client | Available through macOS Mail | Not included yet |
+| Gmail setup through the operating system account settings | Available through macOS Internet Accounts | Not included yet |
+
+Windows does not claim macOS Mail or macOS Internet Accounts support. A future
+Windows mail integration needs its own reviewed provider or OAuth design; it
+must not store a Google password in ULTRON.
+
+## Candidate versus normal release
+
+A **candidate** is a native build that passed the source, security and package
+checks, but is not necessarily signed by the operating-system publisher:
+
+- macOS candidates can trigger a Gatekeeper first-run warning until Apple
+  notarization completes;
+- Windows candidates can trigger Microsoft Defender SmartScreen until an
+  Authenticode signature is configured.
+
+The release notes and GitHub pre-release flag must say this plainly. Checksums
+confirm the downloaded bytes; they do not make an unsigned package trusted by
+Apple or Microsoft.
+
+See the [release guide](RELEASE.md) for the exact build, signing and publishing
+steps.

@@ -9,6 +9,13 @@ export default defineConfig({
     oxlint(),
   ],
 
+  build: {
+    // Three.js is fetched through React.lazy for the Neural Core and globe.
+    // The application entry remains well below 500 kB; this limit covers the
+    // one deferred renderer runtime without hiding growth in the app shell.
+    chunkSizeWarningLimit: 650,
+  },
+
   server: {
     proxy: {
       '/api': {

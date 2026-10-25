@@ -1,14 +1,53 @@
 #!/usr/bin/env bash
 
 # Validate a completed macOS package without reading a developer's private
-# .env, account data, vault, or Mail configuration.
+# .env, account data, vault, or Mail configuration. The target architecture
+# is an input because the Electron executable and PyInstaller backend are two
+# separate native binaries that must agree.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
-DEFAULT_APP="${PROJECT_ROOT}/desktop/out/ULTRON ai-darwin-arm64/ULTRON ai.app"
-PACKAGE_APP="${1:-${DEFAULT_APP}}"
+REQUESTED_ARCH="${ULTRON_ARCH:-$(uname -m)}"
 ASAR_TOOL="${PROJECT_ROOT}/desktop/node_modules/.bin/asar"
+
+normalize_arch() {
+  case "$1" in
+    arm64)
+      printf 'arm64\n'
+      ;;
+    x64|x86_64)
+      printf 'x64\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+machine_for_arch() {
+  case "$1" in
+    arm64)
+      printf 'arm64\n'
+      ;;
+    x64)
+      printf 'x86_64\n'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if ! ARCH="$(normalize_arch "${REQUESTED_ARCH}")"; then
+  printf 'ULTRON_ARCH must be arm64 or x64. Received: %s\n' \
+    "${REQUESTED_ARCH}" >&2
+  exit 1
+fi
+
+TARGET_MACHINE="$(machine_for_arch "${ARCH}")"
+DEFAULT_APP="${PROJECT_ROOT}/desktop/out/ULTRON ai-darwin-${ARCH}/ULTRON ai.app"
+PACKAGE_APP="${1:-${DEFAULT_APP}}"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   printf 'scripts/verify-release.sh must run on macOS.\n' >&2
@@ -30,6 +69,15 @@ if [[ ! -f "${APP_ASAR}" ]]; then
   printf 'app.asar is missing from the package.\n' >&2
   exit 1
 fi
+
+ASAR_CONTENTS="$("${ASAR_TOOL}" list "${APP_ASAR}")"
+for required_entry in /main.cjs /preload.cjs /package.json; do
+  if ! printf '%s\n' "${ASAR_CONTENTS}" | grep -Fxq "${required_entry}"; then
+    printf 'The application archive is missing required desktop file: %s\n' \
+      "${required_entry}" >&2
+    exit 1
+  fi
+done
 
 codesign --verify --deep --strict "${PACKAGE_APP}"
 
@@ -89,11 +137,12 @@ for executable in \
   "${PACKAGE_APP}/Contents/MacOS/ULTRON ai" \
   "${PACKAGE_APP}/Contents/Resources/backend/ultron-backend"; do
   if [[ ! -x "${executable}" ]]; then
-    printf 'Required arm64 executable is missing: %s\n' "${executable}" >&2
+    printf 'Required %s executable is missing: %s\n' "${ARCH}" "${executable}" >&2
     exit 1
   fi
-  if ! lipo -archs "${executable}" | tr ' ' '\n' | grep -Fxq 'arm64'; then
-    printf 'Required executable does not include arm64: %s\n' "${executable}" >&2
+  if ! lipo -archs "${executable}" | tr ' ' '\n' | grep -Fxq "${TARGET_MACHINE}"; then
+    printf 'Required executable does not include %s: %s\n' \
+      "${TARGET_MACHINE}" "${executable}" >&2
     exit 1
   fi
 done
@@ -113,7 +162,7 @@ fi
 
 # A developer can safely build from a working folder that has a local .env,
 # but no non-empty credential value from that file may end up in the bundled
-# backend.  Print only setting names if this guard ever catches a leak.
+# backend. Print only setting names if this guard ever catches a leak.
 PACKAGED_BACKEND="${PACKAGE_APP}/Contents/Resources/backend/ultron-backend"
 LOCAL_ENV="${PROJECT_ROOT}/backend/.env"
 if [[ -x "${PACKAGED_BACKEND}" && -f "${LOCAL_ENV}" ]]; then
@@ -161,4 +210,5 @@ if grep -REni '/Users/|/home/|C:\\Users\\' \
   exit 1
 fi
 
-printf 'ULTRON release package verified: %s (%s)\n' "${bundle_id}" "${version}"
+printf 'ULTRON %s release package verified: %s (%s)\n' \
+  "${ARCH}" "${bundle_id}" "${version}"

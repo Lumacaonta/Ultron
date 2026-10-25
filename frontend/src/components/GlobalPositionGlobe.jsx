@@ -1,5 +1,39 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import * as THREE from 'three'
+import {
+  ACESFilmicToneMapping,
+  AdditiveBlending,
+  BackSide,
+  BufferGeometry,
+  CanvasTexture,
+  Clock,
+  CylinderGeometry,
+  DoubleSide,
+  Float32BufferAttribute,
+  Group,
+  HemisphereLight,
+  IcosahedronGeometry,
+  Line,
+  LineBasicMaterial,
+  LineSegments,
+  MathUtils,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  PointLight,
+  Points,
+  PointsMaterial,
+  RepeatWrapping,
+  RingGeometry,
+  SRGBColorSpace,
+  Scene,
+  SphereGeometry,
+  Sprite,
+  SpriteMaterial,
+  Vector3,
+  WebGLRenderer,
+  WireframeGeometry
+} from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
 const GLOBE_RADIUS = 2.36
@@ -51,16 +85,16 @@ function hasWebGLRenderer() {
 }
 
 function latLonVector(latitude, longitude, radius = GLOBE_RADIUS) {
-  const lat = THREE.MathUtils.degToRad(Number(latitude))
-  const lon = THREE.MathUtils.degToRad(Number(longitude))
+  const lat = MathUtils.degToRad(Number(latitude))
+  const lon = MathUtils.degToRad(Number(longitude))
   const cosLat = Math.cos(lat)
-  return new THREE.Vector3(radius * cosLat * Math.sin(lon), radius * Math.sin(lat), radius * cosLat * Math.cos(lon))
+  return new Vector3(radius * cosLat * Math.sin(lon), radius * Math.sin(lat), radius * cosLat * Math.cos(lon))
 }
 
 function createLine(points, color, opacity = 1) {
-  const geometry = new THREE.BufferGeometry().setFromPoints(points)
-  const material = new THREE.LineBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false })
-  return new THREE.Line(geometry, material)
+  const geometry = new BufferGeometry().setFromPoints(points)
+  const material = new LineBasicMaterial({ color, transparent: opacity < 1, opacity, depthWrite: false })
+  return new Line(geometry, material)
 }
 
 function createGeoRoute(coordinates, radius, color, opacity, closed = false) {
@@ -152,12 +186,12 @@ function createWorldTexture() {
   vignette.addColorStop(1, 'rgba(0, 0, 0, 0.58)')
   context.fillStyle = vignette
   context.fillRect(0, 0, width, height)
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
   // SphereGeometry's u=0 seam is at -90°. Shift a conventional world map
   // by a quarter turn so its seam stays in the Pacific instead of bisecting
   // North America and the selected coordinate still matches its coastline.
-  texture.wrapS = THREE.RepeatWrapping
+  texture.wrapS = RepeatWrapping
   texture.offset.x = 0.25
   return texture
 }
@@ -167,9 +201,9 @@ function createMarkerTag() {
   canvas.width = 480
   canvas.height = 116
   const context = canvas.getContext('2d')
-  const texture = new THREE.CanvasTexture(canvas)
-  texture.colorSpace = THREE.SRGBColorSpace
-  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false }))
+  const texture = new CanvasTexture(canvas)
+  texture.colorSpace = SRGBColorSpace
+  const sprite = new Sprite(new SpriteMaterial({ map: texture, transparent: true, depthWrite: false, depthTest: false }))
   sprite.scale.set(1.7, 0.41, 1)
   sprite.position.y = 1.62
   return { canvas, context, texture, sprite }
@@ -219,9 +253,9 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     const localNormal = latLonVector(latitude, longitude, 1).normalize()
     runtime.world.updateMatrixWorld(true)
     const sceneNormal = localNormal.clone().transformDirection(runtime.world.matrixWorld)
-    const worldCenter = runtime.world.getWorldPosition(new THREE.Vector3())
+    const worldCenter = runtime.world.getWorldPosition(new Vector3())
     runtime.camera.position
-      .copy(worldCenter.clone().add(sceneNormal.multiplyScalar(7.45)).add(new THREE.Vector3(0, 0.26, 0)))
+      .copy(worldCenter.clone().add(sceneNormal.multiplyScalar(7.45)).add(new Vector3(0, 0.26, 0)))
     runtime.controls.target.copy(worldCenter)
     runtime.camera.lookAt(worldCenter)
     runtime.controls.update()
@@ -233,12 +267,12 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     const container = containerRef.current
     if (!container) return undefined
 
-    const scene = new THREE.Scene()
-    const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 50)
+    const scene = new Scene()
+    const camera = new PerspectiveCamera(34, 1, 0.1, 50)
     camera.position.set(0, 0.25, 7.8)
     let renderer
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+      renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
     } catch {
       /*
        * Position selection must remain accessible when a remote desktop,
@@ -248,8 +282,8 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
       return () => window.clearTimeout(retryTimer)
     }
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.outputColorSpace = SRGBColorSpace
+    renderer.toneMapping = ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.12
     renderer.setClearColor(0x000000, 0)
     container.appendChild(renderer.domElement)
@@ -264,32 +298,32 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     controls.zoomSpeed = 0.7
     controls.target.set(0, 0, 0)
 
-    scene.add(new THREE.HemisphereLight(0xff8b97, 0x100208, 1.15))
-    const keyLight = new THREE.PointLight(0xff4259, 22, 16, 2)
+    scene.add(new HemisphereLight(0xff8b97, 0x100208, 1.15))
+    const keyLight = new PointLight(0xff4259, 22, 16, 2)
     keyLight.position.set(4.2, 3.1, 4.8)
     scene.add(keyLight)
-    const edgeLight = new THREE.PointLight(0x7b0a21, 12, 13, 2)
+    const edgeLight = new PointLight(0x7b0a21, 12, 13, 2)
     edgeLight.position.set(-4.5, -2.4, -2.8)
     scene.add(edgeLight)
 
-    const world = new THREE.Group()
-    world.rotation.set(THREE.MathUtils.degToRad(-8), THREE.MathUtils.degToRad(12), 0)
+    const world = new Group()
+    world.rotation.set(MathUtils.degToRad(-8), MathUtils.degToRad(12), 0)
     scene.add(world)
 
     const worldTexture = createWorldTexture()
-    const globe = new THREE.Mesh(
-      new THREE.SphereGeometry(GLOBE_RADIUS, 88, 56),
-      new THREE.MeshStandardMaterial({ color: 0x4f0816, map: worldTexture, emissive: 0x25030b, emissiveMap: worldTexture, emissiveIntensity: 0.34, roughness: 0.67, metalness: 0.42 }),
+    const globe = new Mesh(
+      new SphereGeometry(GLOBE_RADIUS, 88, 56),
+      new MeshStandardMaterial({ color: 0x4f0816, map: worldTexture, emissive: 0x25030b, emissiveMap: worldTexture, emissiveIntensity: 0.34, roughness: 0.67, metalness: 0.42 }),
     )
     world.add(globe)
 
-    const atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(GLOBE_RADIUS * 1.035, 56, 36),
-      new THREE.MeshBasicMaterial({ color: 0xff3650, transparent: true, opacity: 0.075, side: THREE.BackSide, blending: THREE.AdditiveBlending, depthWrite: false }),
+    const atmosphere = new Mesh(
+      new SphereGeometry(GLOBE_RADIUS * 1.035, 56, 36),
+      new MeshBasicMaterial({ color: 0xff3650, transparent: true, opacity: 0.075, side: BackSide, blending: AdditiveBlending, depthWrite: false }),
     )
     world.add(atmosphere)
 
-    const grid = new THREE.Group()
+    const grid = new Group()
     for (let latitudeLine = -60; latitudeLine <= 60; latitudeLine += 15) {
       const points = []
       for (let longitudeLine = -180; longitudeLine <= 180; longitudeLine += 3) points.push(latLonVector(latitudeLine, longitudeLine, GLOBE_RADIUS + 0.017))
@@ -304,27 +338,27 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     }
     world.add(grid)
 
-    const coastlines = new THREE.Group()
+    const coastlines = new Group()
     LANDMASSES.forEach((landmass) => coastlines.add(createGeoRoute(landmass, GLOBE_RADIUS + 0.032, 0xff8792, 0.88, true)))
     world.add(coastlines)
 
-    const network = new THREE.Group()
+    const network = new Group()
     GLOBAL_ROUTES.forEach(([from, to]) => network.add(createGeoRoute([GLOBAL_HUBS[from], GLOBAL_HUBS[to]], GLOBE_RADIUS + 0.045, 0xe53449, 0.24)))
     GLOBAL_HUBS.forEach(([longitude, latitude], index) => {
-      const hub = new THREE.Mesh(new THREE.SphereGeometry(index % 4 === 0 ? 0.032 : 0.023, 8, 7), new THREE.MeshBasicMaterial({ color: index % 4 === 0 ? 0xff8a96 : 0xff4156, transparent: true, opacity: 0.84, blending: THREE.AdditiveBlending, depthWrite: false }))
+      const hub = new Mesh(new SphereGeometry(index % 4 === 0 ? 0.032 : 0.023, 8, 7), new MeshBasicMaterial({ color: index % 4 === 0 ? 0xff8a96 : 0xff4156, transparent: true, opacity: 0.84, blending: AdditiveBlending, depthWrite: false }))
       hub.position.copy(latLonVector(latitude, longitude, GLOBE_RADIUS + 0.052))
       network.add(hub)
     })
     world.add(network)
 
-    const shell = new THREE.LineSegments(
-      new THREE.WireframeGeometry(new THREE.IcosahedronGeometry(GLOBE_RADIUS * 1.03, 2)),
-      new THREE.LineBasicMaterial({ color: 0x8f1228, transparent: true, opacity: 0.035, depthWrite: false }),
+    const shell = new LineSegments(
+      new WireframeGeometry(new IcosahedronGeometry(GLOBE_RADIUS * 1.03, 2)),
+      new LineBasicMaterial({ color: 0x8f1228, transparent: true, opacity: 0.035, depthWrite: false }),
     )
     shell.rotation.set(0.24, 0.48, 0.1)
     world.add(shell)
 
-    const starGeometry = new THREE.BufferGeometry()
+    const starGeometry = new BufferGeometry()
     const starPositions = []
     for (let index = 0; index < 72; index += 1) {
       const angle = index * 2.399963229728653
@@ -333,26 +367,26 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
       const radius = 3.85 + (index % 9) * 0.18
       starPositions.push(radius * radial * Math.cos(angle), radius * y, radius * radial * Math.sin(angle))
     }
-    starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starPositions, 3))
-    const stars = new THREE.Points(starGeometry, new THREE.PointsMaterial({ color: 0xb5263b, size: 0.022, transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }))
+    starGeometry.setAttribute('position', new Float32BufferAttribute(starPositions, 3))
+    const stars = new Points(starGeometry, new PointsMaterial({ color: 0xb5263b, size: 0.022, transparent: true, opacity: 0.42, depthWrite: false, blending: AdditiveBlending }))
     scene.add(stars)
 
-    const marker = new THREE.Group()
+    const marker = new Group()
     marker.visible = false
-    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.16, 1.7, 18, 1, true), new THREE.MeshBasicMaterial({ color: 0xff3d57, transparent: true, opacity: 0.24, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }))
+    const beam = new Mesh(new CylinderGeometry(0.022, 0.16, 1.7, 18, 1, true), new MeshBasicMaterial({ color: 0xff3d57, transparent: true, opacity: 0.24, side: DoubleSide, depthWrite: false, blending: AdditiveBlending }))
     beam.position.y = 0.86
     marker.add(beam)
-    const coreGlow = new THREE.Mesh(new THREE.SphereGeometry(0.12, 18, 12), new THREE.MeshBasicMaterial({ color: 0xff3654, transparent: true, opacity: 0.94, blending: THREE.AdditiveBlending, depthWrite: false }))
+    const coreGlow = new Mesh(new SphereGeometry(0.12, 18, 12), new MeshBasicMaterial({ color: 0xff3654, transparent: true, opacity: 0.94, blending: AdditiveBlending, depthWrite: false }))
     coreGlow.position.y = 0.1
     marker.add(coreGlow)
     const rings = [0.105, 0.155, 0.215].map((radius, index) => {
-      const ring = new THREE.Mesh(new THREE.RingGeometry(radius - 0.008, radius, 48), new THREE.MeshBasicMaterial({ color: index === 0 ? 0xff8d99 : 0xff3d57, transparent: true, opacity: index === 0 ? 0.96 : 0.66, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false }))
+      const ring = new Mesh(new RingGeometry(radius - 0.008, radius, 48), new MeshBasicMaterial({ color: index === 0 ? 0xff8d99 : 0xff3d57, transparent: true, opacity: index === 0 ? 0.96 : 0.66, side: DoubleSide, blending: AdditiveBlending, depthWrite: false }))
       ring.rotation.x = -Math.PI / 2
       ring.position.y = 0.007
       marker.add(ring)
       return ring
     })
-    const markerLight = new THREE.PointLight(0xff4260, 6, 3.2, 2)
+    const markerLight = new PointLight(0xff4260, 6, 3.2, 2)
     markerLight.position.y = 0.46
     marker.add(markerLight)
     const markerTag = createMarkerTag()
@@ -374,7 +408,7 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     } else window.addEventListener('resize', resize)
 
     let frameId = 0
-    const clock = new THREE.Clock()
+    const clock = new Clock()
     const render = () => {
       const elapsed = clock.getElapsedTime()
       const reducedMotion = document.documentElement.classList.contains('ultron-reduced-motion')
@@ -425,14 +459,14 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     const key = `${Number(latitude).toFixed(5)}:${Number(longitude).toFixed(5)}:${String(label || '')}`
     const localNormal = latLonVector(latitude, longitude, 1).normalize()
     runtime.marker.position.copy(localNormal.clone().multiplyScalar(GLOBE_RADIUS + MARKER_CLEARANCE))
-    runtime.marker.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), localNormal)
+    runtime.marker.quaternion.setFromUnitVectors(new Vector3(0, 1, 0), localNormal)
     drawMarkerTag(runtime.markerTag, label || 'GLOBAL POSITION')
     if (runtime.lastLocationKey !== key) {
       runtime.lastLocationKey = key
       runtime.world.updateMatrixWorld(true)
       const sceneNormal = localNormal.clone().transformDirection(runtime.world.matrixWorld)
-      const worldCenter = runtime.world.getWorldPosition(new THREE.Vector3())
-      runtime.camera.position.copy(worldCenter.clone().add(sceneNormal.multiplyScalar(7.45)).add(new THREE.Vector3(0, 0.26, 0)))
+      const worldCenter = runtime.world.getWorldPosition(new Vector3())
+      runtime.camera.position.copy(worldCenter.clone().add(sceneNormal.multiplyScalar(7.45)).add(new Vector3(0, 0.26, 0)))
       runtime.controls.target.copy(worldCenter)
       runtime.camera.lookAt(worldCenter)
       runtime.controls.update()

@@ -12,6 +12,27 @@ fi
 DMG_PATH="$1"
 ATTACH_INFO=''
 DEVICE=''
+REQUESTED_ARCH="${ULTRON_ARCH:-}"
+ARCH=''
+TARGET_MACHINE=''
+
+if [[ -n "${REQUESTED_ARCH}" ]]; then
+  case "${REQUESTED_ARCH}" in
+    arm64)
+      ARCH='arm64'
+      TARGET_MACHINE='arm64'
+      ;;
+    x64|x86_64)
+      ARCH='x64'
+      TARGET_MACHINE='x86_64'
+      ;;
+    *)
+      printf 'ULTRON_ARCH must be arm64 or x64. Received: %s\n' \
+        "${REQUESTED_ARCH}" >&2
+      exit 1
+      ;;
+  esac
+fi
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
   printf 'scripts/verify-macos-dmg.sh must run on macOS.\n' >&2
@@ -90,6 +111,23 @@ if [[ ! -f "$MOUNT_POINT/START HERE.txt" ]] ||
 fi
 
 codesign --verify --deep --strict "$APP_PATH"
+
+if [[ -n "${ARCH}" ]]; then
+  for executable in \
+    "$APP_PATH/Contents/MacOS/ULTRON ai" \
+    "$APP_PATH/Contents/Resources/backend/ultron-backend"; do
+    if [[ ! -x "${executable}" ]]; then
+      printf 'Installer is missing its %s executable: %s\n' \
+        "${ARCH}" "${executable}" >&2
+      exit 1
+    fi
+    if ! lipo -archs "${executable}" | tr ' ' '\n' | grep -Fxq "${TARGET_MACHINE}"; then
+      printf 'Installer executable does not include %s: %s\n' \
+        "${TARGET_MACHINE}" "${executable}" >&2
+      exit 1
+    fi
+  done
+fi
 
 bundle_id="$(plutil -extract CFBundleIdentifier raw "$APP_PATH/Contents/Info.plist")"
 if [[ "$bundle_id" != 'io.ultronai.desktop' ]]; then

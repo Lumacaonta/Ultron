@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import GlobalPositionGlobe from './GlobalPositionGlobe.jsx'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { BACKEND_ORIGIN as BACKEND } from '../auth.js'
+
+const GlobalPositionGlobe = lazy(() => import('./GlobalPositionGlobe.jsx'))
 
 const SECTIONS = [
   ['general', 'GENERAL'],
@@ -12,6 +13,12 @@ const SECTIONS = [
 ]
 
 const LOCATION_QUERY_MIN_LENGTH = 2
+
+function desktopSkillPicker() {
+  if (typeof window === 'undefined') return null
+  const picker = window.ultronDesktop?.selectSkillApp
+  return typeof picker === 'function' ? picker : null
+}
 
 function isCoordinate(value, minimum, maximum) {
   if (value === '' || value === null || value === undefined) return false
@@ -438,13 +445,24 @@ export default function SettingsPage({
     setShowSkillEditor(true)
   }
 
-  async function chooseMacApp() {
+  async function chooseLocalApp() {
     setSkillsError('')
     try {
-      const response = await fetch(`${BACKEND}/api/system/choose-app`)
-      const result = await readJson(response)
+      const nativePicker = desktopSkillPicker()
+      let result
+
+      if (nativePicker) {
+        result = await nativePicker()
+      } else {
+        const response = await fetch(`${BACKEND}/api/system/choose-app`)
+        result = await readJson(response)
+        if (!response.ok) {
+          throw new Error(result.error || 'Unable to choose an application.')
+        }
+      }
+
       if (result.cancelled) return
-      if (!response.ok || !result.ok || !result.path) {
+      if (!result.ok && !result.path) {
         throw new Error(result.error || 'Unable to choose an application.')
       }
       setSkillTarget(result.path)
@@ -614,13 +632,13 @@ export default function SettingsPage({
               className="settings-input"
               value={skillTarget}
               onChange={event => setSkillTarget(event.target.value)}
-              placeholder="/Applications/YourApp.app"
+              placeholder="Choose a local application"
             />
-            <button type="button" className="settings-secondary" onClick={chooseMacApp}>
+            <button type="button" className="settings-secondary" onClick={chooseLocalApp}>
               CHOOSE APP
             </button>
           </div>
-          <small>Choose an installed macOS application.</small>
+          <small>Choose an installed local application.</small>
         </div>
       )
     }
@@ -665,12 +683,24 @@ export default function SettingsPage({
         </SettingsCard>
         <SettingsCard title="Global position" kicker="PRIVATE LOCATION">
           <div className="global-position-layout">
-            <GlobalPositionGlobe
-              latitude={globeLatitude}
-              longitude={globeLongitude}
-              label={selectedLocation?.shortLabel || weatherConfig.label}
-              active={Boolean(selectedLocation || hasLockedPosition)}
-            />
+            <Suspense
+              fallback={(
+                <div className="global-position-globe global-position-globe-fallback" role="status" aria-live="polite">
+                  <div className="global-position-fallback-message">
+                    <i aria-hidden="true" />
+                    <strong>INITIALIZING GLOBE</strong>
+                    <span>LOADING LOCAL MAP</span>
+                  </div>
+                </div>
+              )}
+            >
+              <GlobalPositionGlobe
+                latitude={globeLatitude}
+                longitude={globeLongitude}
+                label={selectedLocation?.shortLabel || weatherConfig.label}
+                active={Boolean(selectedLocation || hasLockedPosition)}
+              />
+            </Suspense>
 
             <div className="global-position-command">
               <div className="settings-field">
@@ -848,10 +878,10 @@ export default function SettingsPage({
     return (
       <>
         <SettingsCard title="Mail & Gmail" kicker="LOCAL ACCOUNT LINK">
-          <SettingRow title="Google sign-in" description="Connect Gmail through macOS Internet Accounts. ULTRON never stores your Google password or token.">
+          <SettingRow title="Google sign-in" description="Open Google sign-in in your browser. On macOS you can also add Gmail through Internet Accounts. ULTRON never stores your Google password or token.">
             <button type="button" className="settings-primary" onClick={connectGmail}>CONNECT GMAIL</button>
           </SettingRow>
-          <SettingRow title="Mail.app" description="Use the accounts already configured on this Mac for reading, drafting and approved transmissions.">
+          <SettingRow title="Local mail" description="macOS Mail can read configured accounts. Every desktop build can open Gmail and a reviewed draft in your own mail application.">
             <span className={`settings-status ${inboxAvailable ? 'online' : ''}`}>{mailLabel}</span>
           </SettingRow>
           <SettingRow title="Email command" description="Allow Agent Chat to check unread messages, read a selected message and prepare email drafts.">
@@ -863,7 +893,7 @@ export default function SettingsPage({
             <button type="button" className="settings-secondary" onClick={() => openEmail('gmail')}>OPEN GMAIL</button>
             <button type="button" className="settings-secondary" onClick={composeEmail}>NEW DRAFT</button>
           </div>
-          <p className="settings-note">After signing in, use Check status to confirm the account. Every message is prepared in Agent Chat and sends only after you press SEND NOW.</p>
+          <p className="settings-note">On macOS, Check status confirms the Mail account. Every message is prepared in Agent Chat and sends only after you press SEND NOW.</p>
           {emailFeedback && <p className="settings-feedback">{emailFeedback}</p>}
         </SettingsCard>
         <SettingsCard title="Inbox" kicker="ON-DEMAND READ">
@@ -923,7 +953,7 @@ export default function SettingsPage({
               <div className="settings-field"><label>NAME</label><input className="settings-input" value={skillName} onChange={event => setSkillName(event.target.value)} placeholder="Open Docker" /></div>
               <div className="settings-field"><label>DESCRIPTION</label><textarea className="settings-textarea" value={skillDescription} onChange={event => setSkillDescription(event.target.value)} placeholder="Open Docker Desktop." /></div>
               <div className="settings-field"><label>COMMAND</label><input className="settings-input" value={skillTrigger} onChange={event => setSkillTrigger(event.target.value)} placeholder="apri docker" /><small>The phrase you say to ULTRON.</small></div>
-              <div className="settings-field"><label>ACTION</label><select className="settings-select" value={skillAction} onChange={event => setSkillAction(event.target.value)}><option value="open_app">OPEN MAC APP</option><option value="open_url">OPEN URL</option><option value="research">WEB RESEARCH</option><option value="ask_ai">AI REQUEST</option></select></div>
+              <div className="settings-field"><label>ACTION</label><select className="settings-select" value={skillAction} onChange={event => setSkillAction(event.target.value)}><option value="open_app">OPEN LOCAL APP</option><option value="open_url">OPEN URL</option><option value="research">WEB RESEARCH</option><option value="ask_ai">AI REQUEST</option></select></div>
               {renderSkillTarget()}
               <div className="settings-actions">
                 <button type="button" className="settings-secondary" onClick={() => { resetSkillEditor(); setShowSkillEditor(false) }}>CANCEL</button>

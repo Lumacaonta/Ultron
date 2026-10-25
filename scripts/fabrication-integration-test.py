@@ -49,6 +49,7 @@ def main() -> None:
                 "ULTRON_AUTH_DATA_DIR": str(root / "accounts"),
                 "ULTRON_AUTH_SECRET": "fabrication-test-secret-" + ("f" * 64),
                 "ULTRON_AUTH_REQUIRE_EMAIL_VERIFICATION": "false",
+                "ULTRON_DESKTOP_PICKER_SECRET": "fabrication-picker-secret-" + ("p" * 64),
             }
         )
         sys.path.insert(0, str(BACKEND))
@@ -79,6 +80,16 @@ def main() -> None:
                         for route in nested_router.routes
                         if getattr(route, "path", None)
                     )
+            # Native file/application registration requires a secret that only
+            # Electron main receives. The renderer never receives this token.
+            picker_secret = os.environ["ULTRON_DESKTOP_PICKER_SECRET"]
+            expect_http(403, lambda: backend._require_desktop_picker(SimpleNamespace(headers={})))
+            backend._require_desktop_picker(
+                SimpleNamespace(headers={"X-Ultron-Desktop-Picker": picker_secret})
+            )
+            expect_http(403, lambda: external_apps._require_native_desktop_picker(None))
+            external_apps._require_native_desktop_picker(picker_secret)
+
             for expected in (
                 "/api/printer/profiles",
                 "/api/printer/ports",
@@ -86,6 +97,8 @@ def main() -> None:
                 "/api/printer/test-connection",
                 "/api/printer/connect",
                 "/api/models/apps",
+                "/api/models/register",
+                "/api/models/apps/register",
                 "/api/models/open-external",
                 "/api/models/apps/{app_id}/launch",
             ):
@@ -231,6 +244,22 @@ def main() -> None:
                 launched = external_apps.launch_external_app(linked["id"])
             assert launched == {"ok": True, "application": "Fixture slicer"}
             assert open_app.call_args.args[0] == ["open", "-a", str(fake_app.resolve())]
+
+            # Windows hands an already-validated .exe a selected model without
+            # using a shell. This stays mocked and never starts a process.
+            fake_windows_app = root / "Fixture Slicer.exe"
+            fake_windows_app.write_bytes(b"fixture executable")
+            with (
+                patch.object(external_apps.platform, "system", return_value="Windows"),
+                patch.object(external_apps.subprocess, "Popen") as open_windows_app,
+            ):
+                resolved_windows_app = external_apps._resolve_application(fake_windows_app)
+                assert resolved_windows_app == fake_windows_app.resolve()
+                external_apps._launch_application(resolved_windows_app, binary_stl)
+            windows_command = open_windows_app.call_args.args[0]
+            assert Path(windows_command[0]).resolve() == fake_windows_app.resolve()
+            assert Path(windows_command[1]).resolve() == binary_stl.resolve()
+            assert open_windows_app.call_args.kwargs["shell"] is False
 
             # No status call can create a connection by itself.
             printer.close_all_printer_connections()

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
+import platform
 import re
 import subprocess
 import webbrowser
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 from auth import get_current_user, get_user_data_dir
 
@@ -23,8 +26,8 @@ DEFAULT_SKILLS = [
     },
     {
         "id": "open-apps",
-        "name": "Mac Applications",
-        "description": "Launch installed Mac applications.",
+        "name": "Local Applications",
+        "description": "Launch an explicitly selected local application.",
         "trigger": "apri app",
         "action": "open_app",
         "target": "",
@@ -211,7 +214,20 @@ def _open_target(
         ):
             url = "https://" + url
 
-        webbrowser.open(url)
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return {
+                "reply": "Choose a valid HTTP or HTTPS website.",
+                "action": "skill_error",
+            }
+
+        try:
+            webbrowser.open(url)
+        except Exception:
+            return {
+                "reply": "ULTRON could not open that website.",
+                "action": "skill_error",
+            }
 
         return {
             "reply": "Opening the requested website.",
@@ -221,18 +237,38 @@ def _open_target(
     if action == "open_app":
         app_path = Path(target).expanduser()
 
-        if target.startswith(("/", "~")):
-            if not app_path.exists() or app_path.suffix.lower() != ".app":
+        if platform.system() == "Darwin":
+            if app_path.is_absolute() or target.startswith("~"):
+                if not app_path.exists() or app_path.suffix.lower() != ".app":
+                    return {
+                        "reply": "The selected application could not be found.",
+                        "action": "skill_error",
+                    }
+                command = ["open", str(app_path)]
+            else:
+                command = ["open", "-a", target]
+        elif platform.system() == "Windows":
+            if not app_path.is_absolute() or app_path.suffix.lower() != ".exe" or not app_path.is_file():
                 return {
-                    "reply": "The selected application could not be found.",
+                    "reply": "Choose a local Windows application in Settings first.",
                     "action": "skill_error",
                 }
-            command = ["open", str(app_path)]
+            command = [str(app_path)]
         else:
-            command = ["open", "-a", target]
+            if not app_path.is_absolute() or not app_path.is_file() or not os.access(app_path, os.X_OK):
+                return {
+                    "reply": "Choose an executable local application in Settings first.",
+                    "action": "skill_error",
+                }
+            command = [str(app_path)]
 
         try:
-            subprocess.Popen(command)
+            subprocess.Popen(
+                command,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                shell=False,
+            )
         except OSError:
             return {
                 "reply": "ULTRON could not open that application.",

@@ -9,6 +9,7 @@ import sqlite3
 import stat
 import threading
 import time
+import webbrowser
 from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -66,6 +67,9 @@ OLLAMA_URL = os.getenv(
 OLLAMA_MODEL = os.getenv("ULTRON_OLLAMA_MODEL", "llama3.2").strip()
 BACKEND_LAUNCH_SECRET = os.getenv("ULTRON_LAUNCH_SECRET", "").strip()
 BACKEND_INSTANCE_ID = os.getenv("ULTRON_LAUNCH_INSTANCE_ID", "").strip()
+BACKEND_DESKTOP_PICKER_SECRET = os.getenv(
+    "ULTRON_DESKTOP_PICKER_SECRET", ""
+).strip()
 ENABLE_API_DOCS = os.getenv("ULTRON_ENABLE_API_DOCS", "").strip().lower() in {
     "1",
     "true",
@@ -1002,6 +1006,23 @@ def _remember_selected_model(model_path: Path) -> None:
     _selected_models_for_active_account()[str(model_path)] = time.monotonic()
 
 
+def _require_desktop_picker(request: FastAPIRequest) -> None:
+    """Accept native selections only from this Electron launch instance."""
+
+    if not BACKEND_DESKTOP_PICKER_SECRET:
+        raise _model_error(
+            503,
+            "The native desktop selector is unavailable in this session.",
+        )
+
+    supplied = request.headers.get("X-Ultron-Desktop-Picker", "").strip()
+    if not supplied or not hmac.compare_digest(
+        supplied,
+        BACKEND_DESKTOP_PICKER_SECRET,
+    ):
+        raise _model_error(403, "The local desktop selection was not verified.")
+
+
 def _read_model_prefix(model_path: Path, byte_limit: int = 512 * 1024) -> bytes:
     """Read a bounded prefix only for small, non-authoritative model telemetry."""
 
@@ -1352,22 +1373,84 @@ _CURA_APP_NAMES = (
 )
 
 
+def _windows_cura_paths() -> list[Path]:
+    """Return conventional Cura executables without searching arbitrary disks."""
+
+    roots: list[Path] = []
+    for variable in ("ProgramFiles", "ProgramW6432", "LOCALAPPDATA"):
+        value = os.getenv(variable, "").strip()
+        if not value:
+            continue
+        root = Path(value)
+        roots.append(root)
+        # Per-user Windows installers conventionally live under
+        # LocalAppData\Programs. Keep this narrow and never scan a disk.
+        if variable == "LOCALAPPDATA":
+            roots.append(root / "Programs")
+
+    seen: set[Path] = set()
+    candidates: list[Path] = []
+    patterns = (
+        "UltiMaker Cura*/UltiMaker-Cura.exe",
+        "Ultimaker Cura*/Cura.exe",
+        "Cura*/Cura.exe",
+    )
+    for root in roots:
+        for pattern in patterns:
+            try:
+                matches = root.glob(pattern)
+            except OSError:
+                continue
+            for candidate in matches:
+                try:
+                    resolved = candidate.resolve(strict=True)
+                except (OSError, RuntimeError):
+                    continue
+                if resolved.is_file() and resolved not in seen:
+                    seen.add(resolved)
+                    candidates.append(resolved)
+    return candidates
+
+
 def _open_model_in_cura(model_path: Path) -> dict:
     """Pass the picked model to an installed local Cura application."""
 
     attempts: list[list[str]] = []
+    system = platform.system()
 
-    for app_path in _CURA_APP_PATHS:
-        if app_path.is_dir():
-            attempts.append(["open", "-a", str(app_path), str(model_path)])
+    if system == "Darwin":
+        for app_path in _CURA_APP_PATHS:
+            if app_path.is_dir():
+                attempts.append(["open", "-a", str(app_path), str(model_path)])
 
-    for app_name in _CURA_APP_NAMES:
-        attempts.append(["open", "-a", app_name, str(model_path)])
+        for app_name in _CURA_APP_NAMES:
+            attempts.append(["open", "-a", app_name, str(model_path)])
+    elif system == "Windows":
+        attempts.extend(
+            [[str(app_path), str(model_path)] for app_path in _windows_cura_paths()]
+        )
+    else:
+        raise _model_error(
+            501,
+            "Direct Cura handoff is currently available in the macOS and Windows desktop builds.",
+        )
 
     last_error = ""
 
     for command in attempts:
         try:
+            if system == "Windows":
+                subprocess.Popen(
+                    command,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                )
+                return {
+                    "ok": True,
+                    "application": Path(command[0]).stem,
+                    "model": model_path.name,
+                }
+
             result = subprocess.run(
                 command,
                 capture_output=True,
@@ -1390,7 +1473,7 @@ def _open_model_in_cura(model_path: Path) -> dict:
     if not attempts:
         raise _model_error(
             404,
-            "UltiMaker Cura was not found in Applications.",
+            "UltiMaker Cura was not found in the usual local application locations.",
         )
 
     raise _model_error(
@@ -1409,6 +1492,12 @@ def pick_local_model():
     ULTRON marks formats it can render itself and safely hands all other
     selected assets to a user-connected local application.
     """
+
+    if platform.system() != "Darwin":
+        raise _model_error(
+            501,
+            "Use the ULTRON desktop file selector on this platform.",
+        )
 
     chooser_script = """
 try
@@ -1449,6 +1538,22 @@ end try
         "ok": True,
         "file": _model_metadata(model_path),
     }
+
+
+@app.post("/api/models/register")
+def register_local_model(data: ModelPathRequest, request: FastAPIRequest):
+    """Record one path returned by the desktop's native file dialog.
+
+    The renderer can call this only through its per-launch loopback capability.
+    It still cannot use arbitrary paths after this request: subsequent read,
+    reveal, and handoff endpoints require this short-lived, account-local
+    registration.
+    """
+
+    _require_desktop_picker(request)
+    model_path = _resolve_model_file(data.path, require_selected=False)
+    _remember_selected_model(model_path)
+    return {"ok": True, "file": _model_metadata(model_path)}
 
 
 @app.get("/api/models/file")
@@ -1494,13 +1599,21 @@ def open_selected_model_in_cura(data: ModelPathRequest):
 
 @app.post("/api/models/reveal")
 def reveal_selected_model(data: ModelPathRequest):
-    """Reveal the user-selected local model in Finder."""
+    """Reveal the user-selected local model in the host file browser."""
 
     model_path = _resolve_model_file(data.path)
 
+    system = platform.system()
+    if system == "Darwin":
+        command = ["open", "-R", str(model_path)]
+    elif system == "Windows":
+        command = ["explorer.exe", f"/select,{model_path}"]
+    else:
+        command = ["xdg-open", str(model_path.parent)]
+
     try:
         result = subprocess.run(
-            ["open", "-R", str(model_path)],
+            command,
             capture_output=True,
             text=True,
             timeout=15,
@@ -1508,13 +1621,13 @@ def reveal_selected_model(data: ModelPathRequest):
     except (OSError, subprocess.TimeoutExpired) as error:
         raise _model_error(
             500,
-            "ULTRON could not reveal the model in Finder.",
+            "ULTRON could not reveal the model in the local file browser.",
         ) from error
 
     if result.returncode != 0:
         raise _model_error(
             502,
-            "ULTRON could not reveal the model in Finder.",
+            "ULTRON could not reveal the model in the local file browser.",
         )
 
     return {"ok": True, "model": model_path.name}
@@ -1542,19 +1655,37 @@ class AgentRequest(BaseModel):
     history: list[ChatHistoryTurn] = Field(default_factory=list)
 
 
-def open_mac_url(url):
-    subprocess.Popen(
-        ["open", url],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+def open_external_url(url: str) -> None:
+    """Open one explicitly requested HTTP(S) URL on the current platform."""
+
+    parsed = urlparse(str(url or ""))
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("ULTRON can open only HTTP or HTTPS addresses.")
+
+    if platform.system() == "Darwin":
+        subprocess.Popen(
+            ["open", url],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return
+
+    if platform.system() == "Windows":
+        startfile = getattr(os, "startfile", None)
+        if startfile is None:
+            raise OSError("The Windows URL launcher is unavailable.")
+        startfile(url)
+        return
+
+    if not webbrowser.open_new_tab(url):
+        raise OSError("The local URL launcher is unavailable.")
 
 
 @app.post("/api/system/open-makerworld")
 def open_makerworld():
     """Open MakerWorld only after an explicit command from the local UI."""
 
-    open_mac_url("https://makerworld.com/")
+    open_external_url("https://makerworld.com/")
     return {"ok": True}
 
 
@@ -2407,7 +2538,7 @@ def agent(request: AgentRequest):
         if target in websites:
             url, name, action = websites[target]
 
-            open_mac_url(url)
+            open_external_url(url)
 
             return {
                 "reply": f"Opening {name}.",
@@ -2447,7 +2578,7 @@ def agent(request: AgentRequest):
 
         # Direct URL.
         if target.startswith("http://") or target.startswith("https://"):
-            open_mac_url(target)
+            open_external_url(target)
 
             return {
                 "reply": "Opening the requested website.",
@@ -2456,7 +2587,7 @@ def agent(request: AgentRequest):
 
         # Domain such as example.com
         if "." in target and " " not in target:
-            open_mac_url(
+            open_external_url(
                 f"https://{target}"
             )
 

@@ -110,31 +110,133 @@ function TelemetryMetric({ label, value, caption, progress, trace }) {
   )
 }
 
-function PrinterSchematic({ connected }) {
+const PRINTER_PROFILE_LABELS = {
+  'generic-usb': 'USB FDM PRINTER',
+  'marlin-usb': 'MARLIN / ELEGOO / NEPTUNE',
+  'octoprint-local': 'OCTOPRINT FABRICATION',
+  'klipper-moonraker-local': 'KLIPPER / MOONRAKER',
+  'bambu-lan': 'BAMBU LAB',
+}
+
+function printerModelName(status = {}) {
+  const candidates = [
+    status?.printerName,
+    status?.printer_name,
+    status?.model,
+    status?.deviceName,
+    status?.device_name,
+    status?.name,
+  ]
+
+  const reported = candidates.find(value => typeof value === 'string' && value.trim())
+  if (reported) return reported.trim().slice(0, 72)
+
+  return PRINTER_PROFILE_LABELS[status?.profileId] || 'LOCAL 3D PRINTER'
+}
+
+function PrinterVisual({ printerStatus }) {
+  const connected = Boolean(printerStatus?.connected)
+  const modelName = printerModelName(printerStatus)
+  const jobName = typeof printerStatus?.job === 'string' ? printerStatus.job.trim() : ''
+  const firmware = typeof printerStatus?.firmware === 'string' ? printerStatus.firmware.trim() : ''
+  const endpoint = printerStatus?.port || printerStatus?.baseUrl || ''
+  const detail = connected
+    ? jobName
+      ? `ACTIVE JOB // ${jobName.slice(0, 64)}`
+      : firmware || endpoint || 'LOCAL TELEMETRY LINK ACTIVE'
+    : printerStatus?.profileId
+      ? `PROFILE SAVED // ${modelName}`
+      : 'CONNECT BY USB OR ADD A LOCAL WI-FI PROFILE'
+
   return (
-    <div className="device-printer-schematic" data-connected={connected ? 'true' : 'false'}>
-      <svg viewBox="0 0 320 205" role="img" aria-label="3D printer schematic">
-        <g className="device-printer-schematic-grid" fill="none">
-          <path d="M28 164h264M46 180h228M68 193h184" />
-          <path d="M32 27h256M32 27v151M288 27v151" />
-        </g>
-        <g className="device-printer-schematic-main" fill="none" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M91 47v104M229 47v104M91 47h138M91 151h138" />
-          <path d="M107 64h106v33H107z" />
-          <path d="M114 116h92v10h-92zM105 128h110" />
-          <path d="M143 97h34M160 81v35" />
-          <path d="M96 151v22h21M224 151v22h-21" />
-          <path d="M71 174h178" />
-          <circle cx="160" cy="80" r="4" />
-        </g>
-        <g className="device-printer-schematic-signal">
-          <circle cx="160" cy="80" r="13" />
-          <circle cx="160" cy="80" r="25" />
-          <path d="M160 40v18M160 102v19M120 80h18M182 80h18" />
-        </g>
-      </svg>
-      <span className="device-printer-schematic-label">3D PRINTER // FABRICATION CELL</span>
-    </div>
+    <figure className="device-printer-visual" data-connected={connected ? 'true' : 'false'}>
+      <div className="device-printer-visual-stage" aria-hidden="true">
+        {connected ? (
+          <svg viewBox="0 0 360 224" focusable="false">
+            <defs>
+              <linearGradient id="printer-frame" x1="0" x2="1" y1="0" y2="1">
+                <stop offset="0" stopColor="#fff0ed" stopOpacity="0.94" />
+                <stop offset="0.25" stopColor="#ff6a5f" stopOpacity="0.88" />
+                <stop offset="1" stopColor="#84101a" stopOpacity="0.9" />
+              </linearGradient>
+              <linearGradient id="printer-bed" x1="0" x2="1">
+                <stop offset="0" stopColor="#3d0710" />
+                <stop offset="0.5" stopColor="#e72733" />
+                <stop offset="1" stopColor="#260409" />
+              </linearGradient>
+              <radialGradient id="printer-object" cx="50%" cy="28%" r="78%">
+                <stop offset="0" stopColor="#ffd5cf" />
+                <stop offset="0.2" stopColor="#ff6c61" />
+                <stop offset="1" stopColor="#8d1019" />
+              </radialGradient>
+            </defs>
+            <g className="device-printer-visual-grid" fill="none">
+              <path d="M34 185H326M56 201H304M80 215H280" />
+              <path d="M57 184l34 31M98 184l25 31M139 184l13 31M181 184l-13 31M222 184l-25 31M263 184l-34 31" />
+            </g>
+            <g className="device-printer-visual-halo" fill="none">
+              <ellipse cx="180" cy="104" rx="117" ry="83" />
+              <ellipse cx="180" cy="104" rx="136" ry="96" />
+              <path d="M180 5v22M180 181v23M55 104h22M283 104h22" />
+            </g>
+            <g className="device-printer-visual-frame" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M98 44v129M262 44v129M98 44h164M98 173h164" />
+              <path d="M108 55h144v12H108z" />
+              <path d="M107 63h146M108 145h144" />
+              <path d="M119 151h122l15 20H104z" fill="url(#printer-bed)" />
+              <path d="M104 171v20h22M256 171v20h-22" />
+              <path d="M139 68h82v42h-82z" fill="rgba(39, 4, 9, 0.6)" />
+              <path d="M139 68h82M139 110h82M139 89h82" opacity="0.46" />
+              <path d="M180 56v70" />
+              <path d="M163 91h34v23h-34z" fill="#160307" />
+              <path d="M169 114h22l-5 15h-12z" fill="url(#printer-frame)" />
+              <path d="M180 129v12" />
+            </g>
+            <g className="device-printer-visual-object">
+              <path d="M157 149l9-18h28l10 18z" />
+              <path d="M162 141h36M166 134h28" />
+            </g>
+            <g className="device-printer-visual-signal" fill="none" strokeLinecap="round">
+              <circle cx="180" cy="102" r="11" />
+              <circle cx="180" cy="102" r="25" />
+              <circle cx="180" cy="102" r="41" />
+            </g>
+            <g className="device-printer-visual-hotend">
+              <circle cx="180" cy="104" r="3.7" />
+              <path d="M180 129v12" />
+            </g>
+          </svg>
+        ) : (
+          <svg viewBox="0 0 360 224" focusable="false">
+            <g className="device-printer-visual-grid" fill="none">
+              <path d="M48 177h264M72 197h216M99 214h162" />
+              <path d="M72 177l27 37M113 177l18 37M154 177l8 37M206 177l-8 37M247 177l-18 37M288 177l-27 37" />
+            </g>
+            <g className="device-printer-visual-empty-orbit" fill="none">
+              <circle cx="180" cy="105" r="73" />
+              <circle cx="180" cy="105" r="93" />
+              <path d="M180 15v23M180 173v23M90 105h24M246 105h24" />
+            </g>
+            <g className="device-printer-visual-empty-core" fill="none" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M180 53l46 26v53l-46 27-46-27V79z" />
+              <path d="M134 79l46 27 46-27M180 106v53" />
+              <path d="M155 113h50M155 126h50" />
+              <path d="M157 91h46" />
+              <circle cx="180" cy="105" r="5" />
+            </g>
+            <g className="device-printer-visual-empty-link" fill="none" strokeLinecap="round">
+              <path d="M112 142l-18 16M248 142l18 16" />
+              <path d="M82 157h23M255 157h23" />
+            </g>
+          </svg>
+        )}
+      </div>
+      <figcaption className="device-printer-visual-caption">
+        <span>{connected ? 'PRINTER IDENTIFIED // LIVE TELEMETRY' : 'FABRICATION SLOT // NO HARDWARE'}</span>
+        <strong>{connected ? modelName : 'NO PRINTER CONNECTED'}</strong>
+        <small title={detail}>{detail}</small>
+      </figcaption>
+    </figure>
   )
 }
 
@@ -558,7 +660,7 @@ export default function DevicesPage({
             </div>
           </header>
 
-          <PrinterSchematic connected={printerConnected} />
+          <PrinterVisual printerStatus={printerStatus} />
 
           <dl className="device-printer-readout">
             <div><dt>STATE</dt><dd>{printerStatus?.status || 'NOT CONNECTED'}</dd></div>

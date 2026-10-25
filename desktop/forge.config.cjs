@@ -45,6 +45,52 @@ const mainEntitlements = path.join(
 )
 
 /*
+ * Windows packages can be built without a certificate for tester candidates.
+ * A public production installer uses the same certificate for Electron's EXE
+ * files and Squirrel's Setup.exe.  Refuse a half-configured signing request so
+ * a release job cannot accidentally claim a signed package when only one
+ * secret was supplied.
+ */
+const windowsCertificateFile = (
+  process.env.ULTRON_WINDOWS_CERTIFICATE_FILE || ''
+).trim()
+const windowsCertificatePassword = (
+  process.env.ULTRON_WINDOWS_CERTIFICATE_PASSWORD || ''
+).trim()
+const productionWindowsSigning = (
+  windowsCertificateFile.length > 0 &&
+  windowsCertificatePassword.length > 0
+)
+
+if (
+  Boolean(windowsCertificateFile) !==
+  Boolean(windowsCertificatePassword)
+) {
+  throw new Error(
+    'Windows signing requires both ULTRON_WINDOWS_CERTIFICATE_FILE and ' +
+    'ULTRON_WINDOWS_CERTIFICATE_PASSWORD.'
+  )
+}
+
+const windowsSignOptions = productionWindowsSigning
+  ? {
+      certificateFile: windowsCertificateFile,
+      certificatePassword: windowsCertificatePassword,
+      timestampServer: (
+        process.env.ULTRON_WINDOWS_TIMESTAMP_SERVER ||
+        'http://timestamp.digicert.com'
+      ).trim(),
+      hash: 'sha256',
+    }
+  : undefined
+
+const windowsIcon = path.join(
+  __dirname,
+  'assets',
+  'ultron-apple-black.ico'
+)
+
+/*
  * Electron's stock macOS template advertises camera and Bluetooth access and
  * permits arbitrary network loads. ULTRON does not need any of those. Remove
  * the template metadata before Electron Packager reads and signs Info.plist;
@@ -108,7 +154,7 @@ module.exports = {
     },
     asar: true,
     afterInitialize: [hardenMacTemplatePlist],
-    // The shell needs only main.cjs and package.json inside app.asar. Runtime
+    // The shell needs main.cjs, preload.cjs and package.json inside app.asar. Runtime
     // frontend/backend resources are copied below with extraResource, so keep
     // generated files, development tooling, and historic recovery copies out
     // of every distributable package.
@@ -122,11 +168,26 @@ module.exports = {
       /\/.*\.(?:db|sqlite|sqlite3)(?:-.*)?$/,
       /\/(?:backend\.log|\.DS_Store)$/,
     ],
+    // Electron Packager resolves this extensionless path to the native
+    // .icns on macOS and the matching .ico on Windows.
     icon: path.join(
       __dirname,
       'assets',
       'ultron-apple-black'
     ),
+    win32metadata: {
+      CompanyName: 'ULTRON contributors',
+      FileDescription: 'ULTRON local-first AI workspace',
+      ProductName: 'ULTRON ai',
+      InternalName: 'ultron-ai',
+      'requested-execution-level': 'asInvoker',
+    },
+    windowsSign: productionWindowsSigning
+      ? {
+          ...windowsSignOptions,
+          continueOnError: false,
+        }
+      : undefined,
 
     // Forge signs every discovered executable in a production package. The
     // primary Electron executable receives only the capabilities ULTRON uses;
@@ -186,9 +247,28 @@ module.exports = {
       name:
         '@electron-forge/maker-zip',
 
+      // A portable ZIP is useful both on macOS and Windows. It contains the
+      // same bundled local backend as the installer and needs no Python or
+      // Node.js on the recipient's computer.
       platforms: [
-        'darwin'
-      ]
-    }
+        'darwin',
+        'win32',
+      ],
+    },
+    {
+      name: '@electron-forge/maker-squirrel',
+      platforms: ['win32'],
+      config: {
+        name: 'ultron_ai',
+        exe: 'ULTRON ai.exe',
+        noMsi: true,
+        setupExe: 'ULTRON-ai-Setup.exe',
+        setupIcon: windowsIcon,
+        // This stays absent for an unsigned candidate. When CI receives the
+        // two certificate secrets it signs Setup.exe and Squirrel artifacts
+        // with SHA-256 and a timestamp as part of the same build.
+        windowsSign: windowsSignOptions,
+      },
+    },
   ]
 }

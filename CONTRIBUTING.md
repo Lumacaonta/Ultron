@@ -13,7 +13,7 @@ ULTRON is a local-first desktop application. Contributions should preserve these
 
 ## Set up a development copy
 
-Follow the [Quick start](README.md#quick-start-for-development) section in the README. Use a fresh test account, a test Obsidian vault, and non-sensitive sample models while developing.
+Follow the [development setup](README.md#build-and-run-from-source-developers) section in the README. Use a fresh test account, a test Obsidian vault, and non-sensitive sample models while developing.
 
 ## Make a change
 

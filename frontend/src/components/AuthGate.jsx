@@ -148,9 +148,16 @@ export default function AuthGate({ children }) {
     let disposed = false
 
     async function initialize() {
+      const savedSession = getSessionToken()
+      // Restored session storage needs the Electron-main bridge too, otherwise
+      // authenticated native file dialogs would lose the signed-in account.
+      if (savedSession) {
+        await setSessionToken(savedSession)
+      }
+
       const [configResult, accountResult] = await Promise.allSettled([
         getAuthConfig(),
-        getSessionToken() ? getCurrentAccount() : Promise.resolve(null),
+        savedSession ? getCurrentAccount() : Promise.resolve(null),
       ])
 
       if (disposed) return
@@ -196,7 +203,7 @@ export default function AuthGate({ children }) {
       throw new Error('The local core returned an incomplete session. Please try again.')
     }
 
-    setSessionToken(result.token)
+    await setSessionToken(result.token)
     const nextUser = result.user
     const requiresVerification = result.verification_required === true || (verificationRequired && !isVerified(nextUser))
 

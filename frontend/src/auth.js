@@ -152,13 +152,43 @@ export function getSessionToken() {
   return getBrowserStorage()?.getItem(SESSION_TOKEN_KEY) || ''
 }
 
+function desktopSessionBridge() {
+  if (typeof window === 'undefined') return null
+  const bridge = window.ultronDesktop
+  if (!bridge || typeof bridge !== 'object') return null
+  return bridge
+}
+
+function syncDesktopSessionToken(token) {
+  const bridge = desktopSessionBridge()
+  if (typeof bridge?.syncSessionToken !== 'function') return Promise.resolve(false)
+
+  return Promise.resolve(bridge.syncSessionToken(token)).then(
+    result => result?.ok === true,
+    () => false,
+  )
+}
+
+function clearDesktopSessionToken() {
+  const bridge = desktopSessionBridge()
+  if (typeof bridge?.clearSessionToken !== 'function') return Promise.resolve(false)
+
+  return Promise.resolve(bridge.clearSessionToken()).then(
+    result => result?.ok === true,
+    () => false,
+  )
+}
+
 export function setSessionToken(token) {
-  if (!token) return
-  getBrowserStorage()?.setItem(SESSION_TOKEN_KEY, String(token))
+  const value = String(token || '')
+  if (!value) return clearSessionToken()
+  getBrowserStorage()?.setItem(SESSION_TOKEN_KEY, value)
+  return syncDesktopSessionToken(value)
 }
 
 export function clearSessionToken() {
   getBrowserStorage()?.removeItem(SESSION_TOKEN_KEY)
+  return clearDesktopSessionToken()
 }
 
 /**

@@ -42,7 +42,12 @@ jobs:
           python scripts/repository-hygiene.py
           backend/.venv/bin/python -m py_compile backend/auth.py backend/email_service.py backend/external_apps.py backend/launcher.py backend/main.py backend/memory.py backend/printer_service.py backend/research.py backend/skills_api.py backend/skills_engine.py
           node --check desktop/main.cjs
+          node --check desktop/preload.cjs
           node --check desktop/forge.config.cjs
+          node scripts/verify-desktop-bridge.mjs
+          node scripts/verify-windows-config.mjs
+          npm --prefix frontend audit --omit=dev --audit-level=high
+          npm --prefix desktop audit --omit=dev --audit-level=high
           npm --prefix frontend run build
 
       - name: Run isolated security smoke test
@@ -50,3 +55,57 @@ jobs:
           backend/.venv/bin/python scripts/security-smoke-test.py
           backend/.venv/bin/python scripts/location-lookup-test.py
           backend/.venv/bin/python scripts/fabrication-integration-test.py
+
+  windows-package:
+    name: Native Windows x64 package
+    runs-on: windows-2022
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: |
+            frontend/package-lock.json
+            desktop/package-lock.json
+
+      - name: Install dependencies
+        shell: pwsh
+        run: |
+          python -m venv backend/.venv
+          backend/.venv/Scripts/python.exe -m pip install --upgrade pip
+          backend/.venv/Scripts/pip.exe install -r requirements.txt
+          npm --prefix frontend ci
+          npm --prefix desktop ci
+
+      - name: Build and verify the native package
+        shell: pwsh
+        run: |
+          python scripts/repository-hygiene.py
+          backend/.venv/Scripts/python.exe -m py_compile backend/auth.py backend/email_service.py backend/external_apps.py backend/launcher.py backend/main.py backend/memory.py backend/printer_service.py backend/research.py backend/skills_api.py backend/skills_engine.py
+          node --check desktop/main.cjs
+          node --check desktop/preload.cjs
+          node --check desktop/forge.config.cjs
+          node scripts/verify-desktop-bridge.mjs
+          node scripts/verify-windows-config.mjs
+          npm --prefix frontend audit --omit=dev --audit-level=high
+          npm --prefix desktop audit --omit=dev --audit-level=high
+          npm --prefix frontend run lint
+          ./scripts/build-windows.ps1 -Architecture x64 -Make
+          ./scripts/verify-windows-package.ps1
+
+      - name: Upload Windows package verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ultron-windows-x64-package-${{ github.sha }}
+          path: |
+            desktop/make/squirrel.windows/x64/*
+            desktop/make/zip/win32/x64/*
+          if-no-files-found: error
+          retention-days: 7

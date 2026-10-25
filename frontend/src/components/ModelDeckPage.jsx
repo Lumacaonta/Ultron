@@ -1,5 +1,30 @@
 import { Component, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as THREE from 'three'
+import {
+  ACESFilmicToneMapping,
+  Box3,
+  BufferGeometry,
+  CircleGeometry,
+  DirectionalLight,
+  Float32BufferAttribute,
+  FogExp2,
+  GridHelper,
+  Group,
+  HemisphereLight,
+  LineBasicMaterial,
+  LineLoop,
+  LineSegments,
+  Mesh,
+  MeshPhysicalMaterial,
+  MeshStandardMaterial,
+  PCFSoftShadowMap,
+  PerspectiveCamera,
+  PointLight,
+  SRGBColorSpace,
+  Scene,
+  Vector3,
+  WebGLRenderer,
+  WireframeGeometry
+} from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import { STLLoader } from 'three/examples/jsm/loaders/STLLoader.js'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js'
@@ -126,6 +151,19 @@ class ModelDeckPreviewBoundary extends Component {
 function responseMessage(payload, fallback) {
   if (typeof payload === 'string') return payload
   return payload?.detail || payload?.error || payload?.message || fallback
+}
+
+function desktopBridge() {
+  if (typeof window === 'undefined') return null
+  const bridge = window.ultronDesktop
+  if (
+    !bridge ||
+    typeof bridge.selectModel !== 'function' ||
+    typeof bridge.selectExternalApp !== 'function'
+  ) {
+    return null
+  }
+  return bridge
 }
 
 function normalizeAsset(payload) {
@@ -300,21 +338,21 @@ function buildGcodeToolpathModel(source) {
 
   if (extrusion.points.length < 6 && travel.points.length < 6) return null
 
-  const root = new THREE.Group()
+  const root = new Group()
   root.name = 'gcode-toolpath'
   root.userData.gcodeToolpath = true
   root.userData.toolpathSegments = extrusion.count + travel.count
 
   const addRoute = (route, kind) => {
     if (route.points.length < 6) return
-    const geometry = new THREE.BufferGeometry()
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(route.points, 3))
+    const geometry = new BufferGeometry()
+    geometry.setAttribute('position', new Float32BufferAttribute(route.points, 3))
     geometry.computeBoundingBox()
     geometry.computeBoundingSphere()
 
-    const line = new THREE.LineSegments(
+    const line = new LineSegments(
       geometry,
-      new THREE.LineBasicMaterial({
+      new LineBasicMaterial({
         color: kind === 'extrusion' ? 0xff4b5a : 0x91202a,
         transparent: true,
         opacity: kind === 'extrusion' ? 0.94 : 0.28,
@@ -369,16 +407,16 @@ function updateWideLineResolution(root, width, height) {
 }
 
 function estimateModelStats(model) {
-  const bounds = new THREE.Box3().setFromObject(model)
-  const size = bounds.isEmpty() ? new THREE.Vector3() : bounds.getSize(new THREE.Vector3())
+  const bounds = new Box3().setFromObject(model)
+  const size = bounds.isEmpty() ? new Vector3() : bounds.getSize(new Vector3())
   let triangles = 0
   let signedVolume = 0
   let toolpathSegments = 0
 
-  const a = new THREE.Vector3()
-  const b = new THREE.Vector3()
-  const c = new THREE.Vector3()
-  const cross = new THREE.Vector3()
+  const a = new Vector3()
+  const b = new Vector3()
+  const c = new Vector3()
+  const cross = new Vector3()
 
   model.updateMatrixWorld(true)
   model.traverse((part) => {
@@ -430,7 +468,7 @@ async function parseModel(extension, arrayBuffer) {
   if (extension === 'stl') {
     const geometry = new STLLoader().parse(arrayBuffer)
     geometry.computeVertexNormals()
-    return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial())
+    return new Mesh(geometry, new MeshStandardMaterial())
   }
 
   if (extension === 'obj') {
@@ -448,7 +486,7 @@ async function parseModel(extension, arrayBuffer) {
   if (extension === 'ply') {
     const geometry = new PLYLoader().parse(arrayBuffer)
     geometry.computeVertexNormals()
-    return new THREE.Mesh(geometry, new THREE.MeshStandardMaterial())
+    return new Mesh(geometry, new MeshStandardMaterial())
   }
 
   if (['gcode', 'gco', 'g', 'gc', 'nc', 'tap'].includes(extension)) {
@@ -469,7 +507,7 @@ async function parseModel(extension, arrayBuffer) {
       loader.parse(
         arrayBuffer,
         '',
-        result => resolve(result.scene || result.scenes?.[0] || new THREE.Group()),
+        result => resolve(result.scene || result.scenes?.[0] || new Group()),
         reject,
       )
     })
@@ -493,7 +531,7 @@ function makePreviewModel(source) {
     if (!isMesh(part)) return
     part.geometry = part.geometry.clone()
     part.geometry.computeVertexNormals()
-    part.material = new THREE.MeshPhysicalMaterial({
+    part.material = new MeshPhysicalMaterial({
       color: 0x4b050b,
       emissive: 0x220005,
       emissiveIntensity: 0.66,
@@ -505,9 +543,9 @@ function makePreviewModel(source) {
     part.castShadow = true
     part.receiveShadow = true
 
-    const wire = new THREE.LineSegments(
-      new THREE.WireframeGeometry(part.geometry),
-      new THREE.LineBasicMaterial({ color: 0xff4b54, transparent: true, opacity: 0.19 }),
+    const wire = new LineSegments(
+      new WireframeGeometry(part.geometry),
+      new LineBasicMaterial({ color: 0xff4b54, transparent: true, opacity: 0.19 }),
     )
     wire.userData.previewWire = true
     part.add(wire)
@@ -528,7 +566,7 @@ function makePreviewModel(source) {
     // Keep a normal WebGL line route as the guaranteed visible layer. Large
     // Cura jobs can contain hundreds of thousands of moves and some Electron
     // GPUs silently drop the wide-line shader used for the glow overlay.
-    part.material = new THREE.LineBasicMaterial({
+    part.material = new LineBasicMaterial({
       color: travelRoute ? 0x8a1d28 : 0xff6570,
       transparent: true,
       opacity: travelRoute ? 0.26 : 0.9,
@@ -565,9 +603,9 @@ function makePreviewModel(source) {
     part.add(visibleRoute)
   })
 
-  const bounds = new THREE.Box3().setFromObject(root)
-  const center = bounds.getCenter(new THREE.Vector3())
-  const size = bounds.getSize(new THREE.Vector3())
+  const bounds = new Box3().setFromObject(root)
+  const center = bounds.getCenter(new Vector3())
+  const size = bounds.getSize(new Vector3())
   const largestAxis = Math.max(size.x, size.y, size.z, 1)
   // Object3D applies its scale to children before adding its position.  The
   // previous version subtracted the unscaled millimetre-space center here,
@@ -592,23 +630,23 @@ function ModelViewport({ model, asset, loading, preview, resetToken, rendererAva
 
     let renderer
     try {
-      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
+      renderer = new WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' })
     } catch {
       window.setTimeout(() => onRendererUnavailable?.(), 0)
       return undefined
     }
 
-    const scene = new THREE.Scene()
-    scene.fog = new THREE.FogExp2(0x050306, 0.085)
-    const camera = new THREE.PerspectiveCamera(33, 1, 0.1, 80)
+    const scene = new Scene()
+    scene.fog = new FogExp2(0x050306, 0.085)
+    const camera = new PerspectiveCamera(33, 1, 0.1, 80)
     camera.position.set(5.5, 3.6, 8.2)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2))
     renderer.setClearColor(0x050306, 0)
-    renderer.outputColorSpace = THREE.SRGBColorSpace
-    renderer.toneMapping = THREE.ACESFilmicToneMapping
+    renderer.outputColorSpace = SRGBColorSpace
+    renderer.toneMapping = ACESFilmicToneMapping
     renderer.toneMappingExposure = 1.28
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    renderer.shadowMap.type = PCFSoftShadowMap
     mount.appendChild(renderer.domElement)
 
     const controls = new OrbitControls(camera, renderer.domElement)
@@ -621,29 +659,29 @@ function ModelViewport({ model, asset, loading, preview, resetToken, rendererAva
     controls.autoRotate = Boolean(model)
     controls.autoRotateSpeed = 0.42
 
-    const ambient = new THREE.HemisphereLight(0xffa9ad, 0x110006, 1.25)
+    const ambient = new HemisphereLight(0xffa9ad, 0x110006, 1.25)
     scene.add(ambient)
-    const key = new THREE.DirectionalLight(0xff4752, 4.7)
+    const key = new DirectionalLight(0xff4752, 4.7)
     key.position.set(5, 7, 5)
     key.castShadow = true
     scene.add(key)
-    const rim = new THREE.PointLight(0xff1231, 48, 20, 2)
+    const rim = new PointLight(0xff1231, 48, 20, 2)
     rim.position.set(-5, 1, -4)
     scene.add(rim)
-    const scanner = new THREE.PointLight(0xff8991, 18, 12, 2)
+    const scanner = new PointLight(0xff8991, 18, 12, 2)
     scanner.position.set(0, -3, 3)
     scene.add(scanner)
 
-    const floor = new THREE.Mesh(
-      new THREE.CircleGeometry(5.65, 96),
-      new THREE.MeshStandardMaterial({ color: 0x120207, metalness: 0.72, roughness: 0.46, transparent: true, opacity: 0.92 }),
+    const floor = new Mesh(
+      new CircleGeometry(5.65, 96),
+      new MeshStandardMaterial({ color: 0x120207, metalness: 0.72, roughness: 0.46, transparent: true, opacity: 0.92 }),
     )
     floor.rotation.x = -Math.PI / 2
     floor.position.y = -2.42
     floor.receiveShadow = true
     scene.add(floor)
 
-    const grid = new THREE.GridHelper(10.4, 24, 0xe41a2b, 0x551019)
+    const grid = new GridHelper(10.4, 24, 0xe41a2b, 0x551019)
     grid.position.y = -2.4
     const gridMaterials = Array.isArray(grid.material) ? grid.material : [grid.material]
     gridMaterials.forEach((material) => {
@@ -652,16 +690,16 @@ function ModelViewport({ model, asset, loading, preview, resetToken, rendererAva
     })
     scene.add(grid)
 
-    const rings = new THREE.Group()
+    const rings = new Group()
     ;[2.35, 3.35, 4.5].forEach((radius, index) => {
-      const ring = new THREE.LineLoop(
-        new THREE.BufferGeometry().setFromPoints(
+      const ring = new LineLoop(
+        new BufferGeometry().setFromPoints(
           Array.from({ length: 96 }, (_, step) => {
             const angle = (step / 96) * Math.PI * 2
-            return new THREE.Vector3(Math.cos(angle) * radius, -2.37 + index * 0.006, Math.sin(angle) * radius)
+            return new Vector3(Math.cos(angle) * radius, -2.37 + index * 0.006, Math.sin(angle) * radius)
           }),
         ),
-        new THREE.LineBasicMaterial({ color: index === 0 ? 0xff6a70 : 0x941420, transparent: true, opacity: index === 0 ? 0.48 : 0.23 }),
+        new LineBasicMaterial({ color: index === 0 ? 0xff6a70 : 0x941420, transparent: true, opacity: index === 0 ? 0.48 : 0.23 }),
       )
       rings.add(ring)
     })
@@ -746,6 +784,59 @@ function Metric({ label, value, detail, active = false }) {
       <strong>{value}</strong>
       {detail && <small>{detail}</small>}
     </article>
+  )
+}
+
+function FabricationPrinterVisual({ online }) {
+  return (
+    <div className="model-deck-printer-visual" data-online={online ? 'true' : 'false'} aria-hidden="true">
+      {online ? (
+        <svg viewBox="0 0 240 128" focusable="false">
+          <g className="model-deck-printer-visual-grid" fill="none">
+            <path d="M18 103h204M35 116h170M57 126h126" />
+            <path d="M42 103l17 23M75 103l11 23M108 103l4 23M132 103l-4 23M165 103l-11 23M198 103l-17 23" />
+          </g>
+          <g className="model-deck-printer-visual-halo" fill="none">
+            <ellipse cx="120" cy="62" rx="74" ry="51" />
+            <path d="M120 7v16M120 104v17M47 62h15M178 62h15" />
+          </g>
+          <g className="model-deck-printer-visual-frame" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M69 27v70M171 27v70M69 27h102M69 97h102" />
+            <path d="M77 34h86v8H77z" />
+            <path d="M78 42h84M78 83h84" />
+            <path d="M83 85h74l10 12H73z" />
+            <path d="M101 44h38v27h-38z" />
+            <path d="M120 35v52" />
+            <path d="M111 58h18v13h-18zM115 71h10l-2 9h-6z" />
+          </g>
+          <g className="model-deck-printer-visual-build">
+            <path d="M106 84l5-9h18l5 9z" />
+            <path d="M110 80h20" />
+          </g>
+          <g className="model-deck-printer-visual-signal" fill="none">
+            <circle cx="120" cy="64" r="9" />
+            <circle cx="120" cy="64" r="19" />
+          </g>
+        </svg>
+      ) : (
+        <svg viewBox="0 0 240 128" focusable="false">
+          <g className="model-deck-printer-visual-grid" fill="none">
+            <path d="M22 103h196M43 116h154M66 126h108" />
+            <path d="M43 103l18 23M77 103l11 23M111 103l4 23M129 103l-4 23M163 103l-11 23M197 103l-18 23" />
+          </g>
+          <g className="model-deck-printer-visual-empty-orbit" fill="none">
+            <circle cx="120" cy="63" r="43" />
+            <circle cx="120" cy="63" r="56" />
+          </g>
+          <g className="model-deck-printer-visual-empty-core" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M120 31l29 16v33l-29 17-29-17V47z" />
+            <path d="M91 47l29 17 29-17M120 64v33" />
+            <path d="M104 70h32M104 78h32" />
+            <circle cx="120" cy="63" r="3.2" />
+          </g>
+        </svg>
+      )}
+    </div>
   )
 }
 
@@ -877,10 +968,18 @@ export default function ModelDeckPage({
     setNotice('OPENING LOCAL ASSET SELECTOR…')
 
     try {
-      let response = await fetch(`${BACKEND}/api/models/pick`, { method: 'POST' })
-      if (response.status === 405) response = await fetch(`${BACKEND}/api/models/pick`)
-      const payload = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(responseMessage(payload, 'The local file selector is unavailable.'))
+      const nativePicker = desktopBridge()
+      let payload
+
+      if (nativePicker) {
+        payload = await nativePicker.selectModel()
+      } else {
+        let response = await fetch(`${BACKEND}/api/models/pick`, { method: 'POST' })
+        if (response.status === 405) response = await fetch(`${BACKEND}/api/models/pick`)
+        payload = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(responseMessage(payload, 'The local file selector is unavailable.'))
+      }
+
       if (payload?.cancelled || payload?.canceled) {
         setNotice('ASSET SELECTION CANCELLED')
         return
@@ -972,10 +1071,10 @@ export default function ModelDeckPage({
         body: JSON.stringify({ path: asset.path }),
       })
       const payload = await response.json().catch(() => null)
-      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, 'Finder could not reveal the model.'))
-      setNotice('FINDER LOCATION REVEALED')
+      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, 'The local file browser could not reveal the model.'))
+      setNotice('LOCAL FILE LOCATION REVEALED')
     } catch (caught) {
-      setError(caught instanceof Error ? caught.message : 'Finder could not reveal the model.')
+      setError(caught instanceof Error ? caught.message : 'The local file browser could not reveal the model.')
     } finally {
       setActionLoading('')
     }
@@ -988,13 +1087,23 @@ export default function ModelDeckPage({
     setAppsError('')
     setError('')
     try {
-      const response = await fetch(`${BACKEND}/api/models/apps/pick`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ label: softwareLabel.trim().slice(0, 80) || undefined }),
-      })
-      const payload = await response.json().catch(() => null)
-      if (!response.ok || payload?.ok === false) throw new Error(responseMessage(payload, 'The application could not be added.'))
+      const label = softwareLabel.trim().slice(0, 80)
+      const nativePicker = desktopBridge()
+      let payload
+
+      if (nativePicker) {
+        payload = await nativePicker.selectExternalApp(label)
+      } else {
+        const response = await fetch(`${BACKEND}/api/models/apps/pick`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ label: label || undefined }),
+        })
+        payload = await response.json().catch(() => null)
+        if (!response.ok) throw new Error(responseMessage(payload, 'The application could not be added.'))
+      }
+
+      if (payload?.ok === false) throw new Error(responseMessage(payload, 'The application could not be added.'))
       if (payload?.cancelled || payload?.canceled) return
 
       const app = normalizeExternalApp(payload?.app)
@@ -1041,7 +1150,7 @@ export default function ModelDeckPage({
     setAppsError('')
     try {
       if (!selectedApp.available || !selectedApp.launchesFiles) {
-        throw new Error(`${selectedApp.name} is not currently available on this Mac.`)
+        throw new Error(`${selectedApp.name} is not currently available on this computer.`)
       }
       const response = await fetch(`${BACKEND}/api/models/apps/${encodeURIComponent(selectedApp.id)}/launch`, {
         method: 'POST',
@@ -1150,11 +1259,9 @@ export default function ModelDeckPage({
         <aside className="model-deck-analysis">
           <section className="model-deck-status-panel">
             <div className="model-deck-section-title"><span>FABRICATION CELL</span><b>02</b></div>
-            <div className="model-deck-printer-glyph" data-online={printerOnline ? 'true' : 'false'} aria-hidden="true">
-              <span /><span /><span /><i />
-            </div>
+            <FabricationPrinterVisual online={printerOnline} />
             <div className="model-deck-printer-readout">
-              <strong>3D PRINTER</strong>
+              <strong>{printerOnline ? '3D PRINTER LINKED' : 'NO PRINTER LINKED'}</strong>
               <span>{printerState}</span>
               <small>{printerTransport}</small>
             </div>
@@ -1266,8 +1373,8 @@ export default function ModelDeckPage({
           >
             {actionLoading === 'external' ? 'OPENING APP…' : selectedApp ? `OPEN IN ${selectedApp.name.toUpperCase()}` : 'OPEN IN LINKED APP'}
           </ActionButton>
-          <ActionButton onClick={revealAsset} disabled={!asset || Boolean(actionLoading)} title="Reveal this asset in Finder">
-            {actionLoading === 'reveal' ? 'REVEALING…' : 'REVEAL IN FINDER'}
+          <ActionButton onClick={revealAsset} disabled={!asset || Boolean(actionLoading)} title="Reveal this asset in the local file browser">
+            {actionLoading === 'reveal' ? 'REVEALING…' : 'REVEAL IN FILE BROWSER'}
           </ActionButton>
         </div>
       </footer>
