@@ -105,7 +105,7 @@ jobs:
         with:
           name: ultron-windows-x64-package-${{ github.sha }}
           path: |
-            desktop/make/squirrel.windows/x64/*
-            desktop/make/zip/win32/x64/*
+            desktop/out/make/squirrel.windows/x64/*
+            desktop/out/make/zip/win32/x64/*
           if-no-files-found: error
           retention-days: 7

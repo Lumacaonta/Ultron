@@ -49,8 +49,8 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Version)) {
     throw 'Could not read the desktop package version.'
 }
 
-$SetupSource = Get-ChildItem -LiteralPath (Join-Path $DesktopRoot 'make\squirrel.windows\x64') -Filter '*Setup.exe' -File | Select-Object -First 1
-$ZipSource = Get-ChildItem -LiteralPath (Join-Path $DesktopRoot 'make\zip\win32\x64') -Filter '*.zip' -File | Select-Object -First 1
+$SetupSource = Get-ChildItem -LiteralPath (Join-Path $DesktopRoot 'out\make\squirrel.windows\x64') -Filter '*Setup.exe' -File | Select-Object -First 1
+$ZipSource = Get-ChildItem -LiteralPath (Join-Path $DesktopRoot 'out\make\zip\win32\x64') -Filter '*.zip' -File | Select-Object -First 1
 if ($null -eq $SetupSource) {
     throw 'Squirrel did not create a Windows Setup.exe installer.'
 }

@@ -33,7 +33,7 @@ $FrontendTarget = Join-Path $DesktopRoot 'resources\frontend'
 $BackendSource = Join-Path $BackendRoot 'dist\ultron-backend.exe'
 $BackendTargetDirectory = Join-Path $DesktopRoot 'resources\backend'
 $DesktopOut = Join-Path $DesktopRoot 'out'
-$DesktopMake = Join-Path $DesktopRoot 'make'
+$DesktopMake = Join-Path $DesktopOut 'make'
 
 $PythonExecutable = $env:PYTHON_BIN
 if ([string]::IsNullOrWhiteSpace($PythonExecutable)) {

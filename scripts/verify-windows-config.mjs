@@ -66,6 +66,36 @@ for (const script of [
   )
 }
 
+const buildScript = fs.readFileSync(
+  path.join(projectRoot, 'scripts', 'build-windows.ps1'),
+  'utf8'
+)
+const releaseScript = fs.readFileSync(
+  path.join(projectRoot, 'scripts', 'release-windows-x64.ps1'),
+  'utf8'
+)
+const verificationWorkflow = fs.readFileSync(
+  path.join(projectRoot, '.github', 'workflows', 'verify.yml'),
+  'utf8'
+)
+assert.ok(
+  buildScript.includes("$DesktopMake = Join-Path $DesktopOut 'make'"),
+  'Windows build output must use Electron Forge’s desktop/out/make directory.'
+)
+assert.ok(
+  releaseScript.includes("out\\make\\squirrel.windows\\x64"),
+  'Windows release script must collect the Squirrel installer from desktop/out/make.'
+)
+assert.ok(
+  releaseScript.includes("out\\make\\zip\\win32\\x64"),
+  'Windows release script must collect the portable ZIP from desktop/out/make.'
+)
+assert.ok(
+  verificationWorkflow.includes('desktop/out/make/squirrel.windows/x64/*') &&
+    verificationWorkflow.includes('desktop/out/make/zip/win32/x64/*'),
+  'Windows CI must upload the Electron Forge output from desktop/out/make.'
+)
+
 const packageVerifier = fs.readFileSync(
   path.join(projectRoot, 'scripts', 'verify-windows-package.ps1'),
   'utf8'
