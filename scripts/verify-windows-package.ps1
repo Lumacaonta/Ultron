@@ -65,13 +65,24 @@ $AsarContents = & $AsarTool list $AppAsar | Out-String
 if ($LASTEXITCODE -ne 0) {
     throw "Could not inspect $AppAsar."
 }
-$AsarEntries = $AsarContents -split "`r?`n"
+$AsarEntries = @(
+    $AsarContents -split "`r?`n" | ForEach-Object {
+        # The asar command can report either root-relative or plain paths.
+        # Normalize both forms before checking the archive contract.
+        $entry = $_.Trim().Replace('\', '/') -replace '^/+', ''
+        if ($entry) {
+            $entry = "/$entry"
+        }
+        $entry
+    } | Where-Object { $_ }
+)
 foreach ($RequiredEntry in @('/main.cjs', '/preload.cjs', '/package.json')) {
     if ($AsarEntries -notcontains $RequiredEntry) {
         throw "The application archive is missing required desktop file: $RequiredEntry"
     }
 }
-if ($AsarContents -match '(?i)(?:backup|before-|\.env(?:$|/)|\.db(?:$|/)|auth\.secret|node_modules|resources|assets|release(?:$|/)|forge\.config|ultron\.png)') {
+$NormalizedAsarContents = $AsarEntries -join "`n"
+if ($NormalizedAsarContents -match '(?i)(?:backup|before-|\.env(?:$|/)|\.db(?:$|/)|auth\.secret|node_modules|resources|assets|release(?:$|/)|forge\.config|ultron\.png)') {
     throw 'The Windows app archive contains an excluded development or private artifact.'
 }
 

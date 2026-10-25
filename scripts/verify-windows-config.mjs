@@ -66,4 +66,17 @@ for (const script of [
   )
 }
 
+const packageVerifier = fs.readFileSync(
+  path.join(projectRoot, 'scripts', 'verify-windows-package.ps1'),
+  'utf8'
+)
+assert.ok(
+  packageVerifier.includes("-replace '^/+', ''"),
+  'The Windows package verifier must canonicalize root-relative asar entry paths.'
+)
+assert.ok(
+  packageVerifier.includes('$entry = $_.Trim().Replace('),
+  'The Windows package verifier must normalize asar path separators.'
+)
+
 console.log('ULTRON Windows packaging configuration verified')

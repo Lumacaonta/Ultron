@@ -223,16 +223,20 @@ def main() -> None:
             fake_app = root / "Fixture Slicer.app"
             (fake_app / "Contents").mkdir(parents=True)
             (fake_app / "Contents" / "Info.plist").write_text("<plist/>", encoding="utf-8")
-            linked = external_apps._remember_custom_app(account_a["id"], str(fake_app), "Fixture slicer")
-            assert linked["configured"] is True
-            assert linked["available"] is True
-            assert "path" not in linked
-            apps_path = external_apps._config_path(account_a["id"])
-            assert_private(apps_path)
-            app, public_app = external_apps._resolve_linked_app(account_a["id"], linked["id"])
-            assert app == fake_app.resolve()
-            assert public_app["name"] == "Fixture slicer"
-            expect_http(422, lambda: external_apps._resolve_linked_app(account_a["id"], "../bad-app"))
+            # The fixture is a macOS bundle even when this isolated test runs
+            # on a Linux CI worker. Keep the test focused on the account
+            # boundary rather than pretending that Linux accepts .app bundles.
+            with patch.object(external_apps.platform, "system", return_value="Darwin"):
+                linked = external_apps._remember_custom_app(account_a["id"], str(fake_app), "Fixture slicer")
+                assert linked["configured"] is True
+                assert linked["available"] is True
+                assert "path" not in linked
+                apps_path = external_apps._config_path(account_a["id"])
+                assert_private(apps_path)
+                app, public_app = external_apps._resolve_linked_app(account_a["id"], linked["id"])
+                assert app == fake_app.resolve()
+                assert public_app["name"] == "Fixture slicer"
+                expect_http(422, lambda: external_apps._resolve_linked_app(account_a["id"], "../bad-app"))
 
             # Starting a linked application for its own printer setup uses the
             # stored account-scoped bundle, never a renderer-provided command
