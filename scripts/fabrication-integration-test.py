@@ -275,7 +275,7 @@ def main() -> None:
             backend._selected_model_paths.clear()
             printer._ephemeral_credentials.clear()
 
-    print("ULTRON fabrication integration test passed")
+    print("Ultron AI fabrication integration test passed")
 
 
 if __name__ == "__main__":

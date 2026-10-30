@@ -1,10 +1,10 @@
-# Contributing to ULTRON
+# Contributing to Ultron AI
 
-Thanks for helping improve ULTRON.
+Thanks for helping improve Ultron AI.
 
 ## Scope
 
-ULTRON is a local-first desktop application. Contributions should preserve these expectations:
+Ultron AI is a local-first desktop application. Contributions should preserve these expectations:
 
 - The local backend stays bound to loopback unless a user deliberately changes that deployment choice.
 - User data, vaults, models, mail, and device access remain local by default.

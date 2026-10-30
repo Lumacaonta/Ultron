@@ -45,7 +45,7 @@
 
 /* ULTRON logo */
 .menu::before {
-  content: "ULTRON  ai";
+  content: "Ultron AI";
 
   position: absolute;
   top: 25px;

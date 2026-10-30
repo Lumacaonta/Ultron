@@ -5138,6 +5138,544 @@ button:disabled {
   color: #fff;
 }
 
+/*
+ * COMFORT LAYER
+ *
+ * ULTRON keeps its dark red identity, but the everyday controls below use a
+ * calmer visual rhythm: useful information first, technical detail second.
+ * This lives at the end of the legacy stylesheet on purpose, so old command
+ * deck rules cannot make the interface tiny again.
+ */
+:root {
+  --font-ui: "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-title: "Avenir Next", Avenir, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "SF Mono", "Cascadia Mono", "Roboto Mono", ui-monospace, Menlo, monospace;
+  --hud-mono: var(--font-ui);
+  --display-tech: var(--font-title);
+  --surface-comfort: rgba(12, 13, 16, 0.88);
+  --surface-comfort-raised: rgba(21, 17, 20, 0.92);
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: var(--font-ui);
+}
+
+body {
+  font-size: 0.9375rem;
+  letter-spacing: 0;
+}
+
+.ultron {
+  background:
+    radial-gradient(ellipse 50% 65% at 53% 43%, rgba(196, 19, 32, 0.17), transparent 70%),
+    radial-gradient(ellipse 80% 45% at 50% 116%, rgba(100, 7, 15, 0.12), transparent 75%),
+    linear-gradient(135deg, #050506 0%, #10080b 50%, #050506 100%);
+}
+
+.ultron::before {
+  opacity: 0.4;
+  background-size: 5.5rem 5.5rem;
+}
+
+.ultron::after {
+  opacity: 0.24;
+}
+
+.honeycomb-bg,
+.threat-lattice {
+  display: none;
+}
+
+.ground-glow {
+  width: 46%;
+  opacity: 0.16;
+  filter: blur(5rem);
+}
+
+.topbar {
+  min-height: 4.85rem;
+  padding: 0.78rem 1.5rem;
+  border-bottom-color: rgba(255, 100, 92, 0.21);
+  border-radius: 0 0 1rem 1rem;
+  background: rgba(8, 9, 11, 0.84);
+  box-shadow: 0 0.75rem 2.5rem rgba(0, 0, 0, 0.32);
+}
+
+.topbar::after {
+  right: 1.5rem;
+  left: 1.5rem;
+  opacity: 0.64;
+}
+
+.logo {
+  gap: 0.7rem;
+  min-width: 13rem;
+}
+
+.brand-mark {
+  width: 2.7rem;
+  height: 2.7rem;
+  filter: drop-shadow(0 0 0.65rem rgba(255, 54, 46, 0.55));
+}
+
+.logo-word,
+.brain-title,
+.selection-name,
+.panel-title strong {
+  font-family: var(--font-title);
+  letter-spacing: 0.08em;
+}
+
+.logo-word {
+  font-size: 1.03rem;
+  font-weight: 760;
+}
+
+.logo-ai {
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.1em;
+}
+
+.top-status,
+.top-account {
+  font-family: var(--font-mono);
+}
+
+.top-online,
+.top-account button {
+  border-radius: 0.45rem;
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.07em;
+}
+
+.top-status-meta {
+  font-family: var(--font-mono);
+  font-size: 0.59rem;
+  letter-spacing: 0.03em;
+}
+
+.top-account span,
+.top-account strong {
+  font-family: var(--font-mono);
+  font-size: 0.53rem;
+  letter-spacing: 0.05em;
+}
+
+.menu {
+  top: 6.25rem;
+  left: 1.6rem;
+  width: 14rem;
+  gap: 0.36rem;
+  padding: 0.72rem;
+  overflow: visible;
+  border-color: rgba(255, 101, 93, 0.24);
+  border-radius: 0.85rem;
+  background: var(--surface-comfort);
+  box-shadow: 0 1rem 2.7rem rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.menu::before,
+.menu::after {
+  display: none;
+}
+
+.menu-label {
+  padding: 0.1rem 0.45rem 0.36rem;
+  color: #b69a98;
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.07em;
+}
+
+.menu button {
+  min-height: 2.95rem;
+  padding: 0 0.7rem;
+  border-radius: 0.56rem;
+  color: #b9b6bb;
+  font-family: var(--font-ui);
+  font-size: 0.86rem;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.menu button::after {
+  display: none;
+}
+
+.menu button:hover {
+  border-color: rgba(255, 146, 139, 0.18);
+  background: rgba(255, 255, 255, 0.065);
+  transform: translateX(0.12rem);
+}
+
+.menu button.active {
+  border-color: rgba(255, 103, 95, 0.5);
+  background: linear-gradient(90deg, rgba(193, 23, 36, 0.5), rgba(121, 10, 18, 0.17));
+  box-shadow: inset 0.18rem 0 0 var(--accent), 0 0.45rem 1.25rem rgba(116, 7, 16, 0.14);
+}
+
+.menu-button-main {
+  gap: 0.7rem;
+}
+
+.menu-button-main svg {
+  width: 1.12rem;
+  height: 1.12rem;
+}
+
+.menu-indicator {
+  width: 0.42rem;
+  height: 0.42rem;
+  border-radius: 50%;
+  transform: none;
+}
+
+.menu-context {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.38rem 0.2rem 0;
+  padding: 0.65rem 0.56rem 0.1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.menu-context strong {
+  color: #f4eeee;
+  font-size: 0.72rem;
+  font-weight: 680;
+}
+
+.menu-context span {
+  color: #958a8d;
+  font-size: 0.66rem;
+  line-height: 1.34;
+}
+
+.brain-area {
+  inset: 6.25rem 17rem 1.5rem 16.1rem;
+}
+
+.brain-area::before {
+  border-color: rgba(255, 103, 95, 0.22);
+  border-radius: 0.95rem;
+  background:
+    linear-gradient(90deg, rgba(255, 77, 69, 0.035) 1px, transparent 1px),
+    linear-gradient(rgba(255, 77, 69, 0.035) 1px, transparent 1px),
+    radial-gradient(ellipse at 50% 48%, rgba(201, 18, 30, 0.16), transparent 61%),
+    linear-gradient(160deg, rgba(35, 8, 12, 0.9), rgba(5, 6, 8, 0.94));
+  background-size: 5rem 5rem, 5rem 5rem, auto, auto;
+  box-shadow: 0 1.2rem 3rem rgba(0, 0, 0, 0.34), inset 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.brain-area::after {
+  inset: 0.7rem;
+  border-color: rgba(255, 119, 112, 0.09);
+  border-radius: 0.68rem;
+  opacity: 0.58;
+}
+
+.brain-title {
+  font-size: 0.88rem;
+  font-weight: 720;
+  letter-spacing: 0.06em;
+}
+
+.brain-title span {
+  font-family: var(--font-mono);
+  font-size: 0.54rem;
+  letter-spacing: 0.06em;
+}
+
+.core-hud,
+.hud-readout {
+  opacity: 0.62;
+}
+
+.page-agent .brain-area {
+  top: 6.25rem;
+  right: 17rem;
+  bottom: 1.5rem;
+  left: 16.1rem;
+}
+
+.page-agent .page-panel {
+  top: 16rem;
+  right: auto;
+  bottom: 0;
+  left: -14.5rem;
+  width: 14rem;
+  height: auto;
+  padding: 0.78rem;
+  border-color: rgba(255, 104, 96, 0.27);
+  border-radius: 0.85rem;
+  background: var(--surface-comfort);
+  clip-path: none;
+  box-shadow: 0 1rem 2.7rem rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+/* On the chat view the left rail is deliberately compact so the conversation
+   begins immediately beneath it; the explanatory copy remains available on
+   the other workspaces where it does not compete with the chat. */
+.page-agent .menu-context {
+  display: none;
+}
+
+.page-agent .page-panel::before {
+  display: none;
+}
+
+.page-agent .agent-chat-head {
+  min-height: 2.65rem;
+  padding: 0.05rem 0.1rem 0.55rem;
+  border-bottom-color: rgba(255, 255, 255, 0.09);
+}
+
+.page-agent .agent-identity {
+  gap: 0.12rem;
+}
+
+.page-agent .agent-identity > span {
+  color: #a99495;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  letter-spacing: 0.06em;
+}
+
+.page-agent .agent-identity strong {
+  color: #fff8f7;
+  font-family: var(--font-title);
+  font-size: 0.92rem;
+  font-weight: 720;
+  letter-spacing: 0.04em;
+}
+
+.page-agent .agent-channel-state {
+  display: inline-flex;
+  gap: 0.32rem;
+  padding: 0.32rem 0.44rem;
+  border: 1px solid rgba(255, 117, 109, 0.27);
+  border-radius: 0.42rem;
+  background: rgba(142, 9, 18, 0.18);
+  color: #f1cecb;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 620;
+  letter-spacing: 0;
+}
+
+.page-agent .agent-channel-state em {
+  color: inherit;
+  font-size: inherit;
+}
+
+.page-agent .agent-channel-state i {
+  width: 0.4rem;
+  height: 0.4rem;
+}
+
+.agent-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.3rem;
+  padding: 0.55rem 0.05rem 0.35rem;
+}
+
+.agent-quick-actions button {
+  min-height: 1.85rem;
+  padding: 0.25rem 0.45rem;
+  border: 1px solid rgba(255, 136, 128, 0.18);
+  border-radius: 0.4rem;
+  background: rgba(255, 255, 255, 0.045);
+  color: #cfc7c8;
+  font-family: var(--font-ui);
+  font-size: 0.6rem;
+  font-weight: 620;
+  white-space: nowrap;
+  transition: 160ms ease;
+}
+
+.agent-quick-actions button:hover:not(:disabled) {
+  border-color: rgba(255, 120, 112, 0.48);
+  background: rgba(196, 22, 35, 0.19);
+  color: #fff6f5;
+}
+
+.agent-quick-actions button span {
+  margin-right: 0.2rem;
+  color: #ff847b;
+  font-size: 0.82rem;
+}
+
+.page-agent .agent-messages {
+  gap: 0.5rem;
+  padding: 0.35rem 0.04rem 0.6rem;
+}
+
+.page-agent .agent-message,
+.page-agent .agent-message.user {
+  gap: 0.23rem;
+  padding: 0.45rem 0.5rem;
+  border-left: 2px solid rgba(255, 84, 75, 0.58);
+  border-radius: 0.35rem;
+  background: linear-gradient(90deg, rgba(130, 8, 18, 0.18), rgba(255, 255, 255, 0.018));
+}
+
+.page-agent .agent-message.user {
+  border-left-color: rgba(255, 238, 236, 0.38);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.page-agent .agent-message-role {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+
+.page-agent .agent-message-meta time {
+  font-family: var(--font-mono);
+  font-size: 0.53rem;
+  letter-spacing: 0;
+}
+
+.page-agent .agent-message-text,
+.page-agent .agent-message.user .agent-message-text {
+  color: #f3edec;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.page-agent .agent-action-card,
+.page-agent .agent-message .obsidian-archive {
+  border-radius: 0.45rem;
+}
+
+.page-agent .agent-input-wrap {
+  gap: 0.5rem;
+  padding-top: 0.54rem;
+  border-top-color: rgba(255, 255, 255, 0.1);
+}
+
+.page-agent .agent-input-wrap textarea {
+  min-height: 2.5rem;
+  padding: 0.62rem 0.7rem;
+  border-color: rgba(255, 135, 126, 0.25);
+  border-radius: 0.5rem;
+  background: rgba(2, 3, 5, 0.72);
+  color: #fff8f7;
+  font-family: var(--font-ui);
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.page-agent .agent-input-wrap textarea::placeholder {
+  color: #948487;
+  font-family: var(--font-ui);
+  font-size: inherit;
+  letter-spacing: 0;
+}
+
+.page-agent .agent-voice {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.62rem;
+}
+
+.page-agent .agent-hint {
+  padding: 0.48rem 0.05rem 0;
+  color: #a99c9f;
+  font-family: var(--font-ui);
+  font-size: 0.62rem;
+  font-weight: 520;
+  letter-spacing: 0;
+  line-height: 1.3;
+}
+
+.agent-voice-readout {
+  border-radius: 0.45rem;
+  font-family: var(--font-ui);
+}
+
+.system-panel {
+  top: 6.25rem;
+  border-color: rgba(255, 103, 95, 0.24);
+  border-radius: 0.85rem;
+  background: var(--surface-comfort);
+  box-shadow: 0 1rem 2.7rem rgba(0, 0, 0, 0.32), inset 0 1px rgba(255, 255, 255, 0.055);
+}
+
+.panel-title span:first-child,
+.system-live,
+.ultron-metric-card-label,
+.ultron-metric-card-sub,
+.ultron-metric-card-value {
+  font-family: var(--font-mono);
+}
+
+.panel-title strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.02em;
+}
+
+.panel-title span:first-child,
+.ultron-metric-card-label {
+  font-size: 0.59rem;
+  letter-spacing: 0.05em;
+}
+
+.ultron-metric-card {
+  border-radius: 0.55rem;
+}
+
+.ultron-metric-card-sub {
+  font-size: 0.55rem;
+}
+
+.ultron-metric-card-value {
+  font-size: 0.96rem;
+}
+
+.settings-header h2,
+.memory-command-header h2,
+.memory-note-head h3,
+.settings-sidebar-title strong {
+  font-family: var(--font-title);
+  letter-spacing: -0.02em;
+}
+
+.settings-header > div > span,
+.settings-card-head > span,
+.memory-command-header span,
+.memory-command-header p,
+.memory-note-head span,
+.memory-note-head p,
+.memory-note-meta {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
+
+@media (max-height: 47.5rem) {
+  .page-agent .page-panel {
+    top: 14.8rem;
+  }
+
+  .agent-quick-actions {
+    gap: 0.22rem;
+    padding: 0.34rem 0.04rem 0.24rem;
+  }
+
+  .agent-quick-actions button {
+    min-height: 1.62rem;
+    padding: 0.18rem 0.34rem;
+    font-size: 0.56rem;
+  }
+}
+
 @media (max-width: 78.125rem) {
   .top-account strong { max-width: 6rem; }
 }

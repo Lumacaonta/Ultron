@@ -87,11 +87,11 @@ function isLocalBackendUrl(url) {
 
 function assertBackendChannel() {
   if (!BACKEND_ORIGIN) {
-    throw new Error('The ULTRON desktop channel is unavailable. Restart ULTRON.')
+    throw new Error('Il canale desktop di Ultron AI non è disponibile. Riavvia Ultron AI.')
   }
 
   if (isPackagedRenderer() && !ULTRON_LAUNCH_SECRET) {
-    throw new Error('The ULTRON desktop channel could not be verified. Restart ULTRON.')
+    throw new Error('Il canale desktop di Ultron AI non può essere verificato. Riavvia Ultron AI.')
   }
 }
 

@@ -19,7 +19,7 @@ if ($env:OS -ne 'Windows_NT') {
 $ScriptDirectory = Split-Path -Parent $PSCommandPath
 $ProjectRoot = (Resolve-Path (Join-Path $ScriptDirectory '..')).Path
 $DesktopRoot = Join-Path $ProjectRoot 'desktop'
-$DefaultPackage = Join-Path $DesktopRoot 'out\ULTRON ai-win32-x64'
+$DefaultPackage = Join-Path $DesktopRoot 'out\Ultron AI-win32-x64'
 if ([string]::IsNullOrWhiteSpace($PackageDirectory)) {
     $PackageDirectory = $DefaultPackage
 }
@@ -47,7 +47,7 @@ function Relative-FileRecords {
     }
 }
 
-$AppExecutable = Join-Path $PackageDirectory 'ULTRON ai.exe'
+$AppExecutable = Join-Path $PackageDirectory 'Ultron AI.exe'
 $ResourcesRoot = Join-Path $PackageDirectory 'resources'
 $AppAsar = Join-Path $ResourcesRoot 'app.asar'
 $PackagedBackend = Join-Path $ResourcesRoot 'backend\ultron-backend.exe'
@@ -55,7 +55,7 @@ $PackagedFrontend = Join-Path $ResourcesRoot 'frontend'
 $PackagedIndex = Join-Path $PackagedFrontend 'index.html'
 $AsarTool = Join-Path $DesktopRoot 'node_modules\.bin\asar.cmd'
 
-Assert-File -Path $AppExecutable -Description 'ULTRON executable'
+Assert-File -Path $AppExecutable -Description 'Ultron AI executable'
 Assert-File -Path $AppAsar -Description 'Electron application archive'
 Assert-File -Path $PackagedBackend -Description 'Bundled local backend'
 Assert-File -Path $PackagedIndex -Description 'Packaged frontend entry point'
@@ -125,7 +125,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($Version)) {
 }
 
 $ExecutableMetadata = (Get-Item -LiteralPath $AppExecutable).VersionInfo
-if ($ExecutableMetadata.ProductName -and $ExecutableMetadata.ProductName -ne 'ULTRON ai') {
+if ($ExecutableMetadata.ProductName -and $ExecutableMetadata.ProductName -ne 'Ultron AI') {
     throw "Unexpected Windows ProductName: $($ExecutableMetadata.ProductName)"
 }
 if ($ExecutableMetadata.ProductVersion -and -not $ExecutableMetadata.ProductVersion.StartsWith($Version)) {
@@ -141,4 +141,4 @@ foreach ($Executable in $Executables) {
     Write-Host "Signature $($Signature.Status): $Executable"
 }
 
-Write-Host "ULTRON Windows package verified: io.ultronai.desktop ($Version)"
+Write-Host "Ultron AI Windows package verified: io.ultronai.desktop ($Version)"

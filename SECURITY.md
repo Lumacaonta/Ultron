@@ -21,4 +21,4 @@ We will acknowledge a good-faith report, investigate it, and coordinate a fix be
 
 ## Local deployment notes
 
-ULTRON is designed to bind its backend to `127.0.0.1`. Do not expose the local API to a network without adding authentication, TLS, origin controls, rate limits, and an explicit deployment review. Keep `ULTRON_AUTH_SECRET`, SMTP credentials, and third-party API keys outside version control.
+Ultron AI is designed to bind its backend to `127.0.0.1`. Do not expose the local API to a network without adding authentication, TLS, origin controls, rate limits, and an explicit deployment review. Keep `ULTRON_AUTH_SECRET`, SMTP credentials, and third-party API keys outside version control.

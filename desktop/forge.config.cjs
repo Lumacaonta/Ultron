@@ -143,14 +143,14 @@ function hardenMacTemplatePlist({
 
 module.exports = {
   packagerConfig: {
-    name: 'ULTRON ai',
-    executableName: 'ULTRON ai',
+    name: 'Ultron AI',
+    executableName: 'Ultron AI',
     appBundleId: 'io.ultronai.desktop',
     appCategoryType: 'public.app-category.productivity',
     darwinDarkModeSupport: true,
     extendInfo: {
       NSMicrophoneUsageDescription:
-        'ULTRON uses the microphone only when you start voice input.',
+        'Ultron AI uses the microphone only when you start voice input.',
     },
     asar: true,
     afterInitialize: [hardenMacTemplatePlist],
@@ -176,9 +176,9 @@ module.exports = {
       'ultron-apple-black'
     ),
     win32metadata: {
-      CompanyName: 'ULTRON contributors',
-      FileDescription: 'ULTRON local-first AI workspace',
-      ProductName: 'ULTRON ai',
+      CompanyName: 'Ultron AI contributors',
+      FileDescription: 'Ultron AI local-first workspace',
+      ProductName: 'Ultron AI',
       InternalName: 'ultron-ai',
       'requested-execution-level': 'asInvoker',
     },
@@ -201,7 +201,7 @@ module.exports = {
           optionsForFile: filePath => {
             if (
               filePath.endsWith(
-                path.join('MacOS', 'ULTRON ai')
+                path.join('MacOS', 'Ultron AI')
               )
             ) {
               return { entitlements: mainEntitlements }
@@ -260,9 +260,9 @@ module.exports = {
       platforms: ['win32'],
       config: {
         name: 'ultron_ai',
-        exe: 'ULTRON ai.exe',
+        exe: 'Ultron AI.exe',
         noMsi: true,
-        setupExe: 'ULTRON-ai-Setup.exe',
+        setupExe: 'Ultron-AI-Setup.exe',
         setupIcon: windowsIcon,
         // This stays absent for an unsigned candidate. When CI receives the
         // two certificate secrets it signs Setup.exe and Squirrel artifacts

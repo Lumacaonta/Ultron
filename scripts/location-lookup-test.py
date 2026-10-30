@@ -118,7 +118,7 @@ def main() -> None:
             backend._location_lookup_last_request_at = original_last_request
             backend._location_lookup_cache.clear()
 
-    print("ULTRON location lookup test passed")
+    print("Ultron AI location lookup test passed")
 
 
 if __name__ == "__main__":

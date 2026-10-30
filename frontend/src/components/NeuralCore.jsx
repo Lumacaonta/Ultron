@@ -4,7 +4,6 @@ import {
   BufferGeometry,
   CanvasTexture,
   CatmullRomCurve3,
-  Clock,
   ConeGeometry,
   DirectionalLight,
   DodecahedronGeometry,
@@ -29,6 +28,7 @@ import {
   Sprite,
   SpriteMaterial,
   TetrahedronGeometry,
+  Timer,
   TorusGeometry,
   Vector2,
   Vector3,
@@ -2109,8 +2109,10 @@ export default function NeuralCore({ onSelect }) {
       onPointerDown
     )
 
-    const clock =
-      new Clock()
+    const timer =
+      new Timer()
+
+    timer.connect(document)
 
     function animate() {
       animationRef.current =
@@ -2119,7 +2121,9 @@ export default function NeuralCore({ onSelect }) {
         )
 
       const time =
-        clock.getElapsedTime()
+        timer
+          .update()
+          .getElapsed()
 
       controls.update()
 
@@ -2422,12 +2426,39 @@ export default function NeuralCore({ onSelect }) {
           const speed =
             trace.packet.userData.speed || 0.1
 
-          const progress =
+          const rawProgress =
             (time * speed + trace.phase) % 1
 
-          trace.packet.position.copy(
-            trace.curve.getPointAt(progress)
-          )
+          const progress =
+            Number.isFinite(rawProgress)
+              ? (rawProgress + 1) % 1
+              : 0
+
+          const curvePoints =
+            trace.curve?.points
+
+          const curveIsUsable =
+            Array.isArray(curvePoints) &&
+            curvePoints.length >= 2 &&
+            curvePoints.every(point => (
+              point &&
+              Number.isFinite(point.x) &&
+              Number.isFinite(point.y) &&
+              Number.isFinite(point.z)
+            ))
+
+          if (curveIsUsable) {
+            const point =
+              trace.curve.getPointAt(progress)
+
+            if (
+              Number.isFinite(point?.x) &&
+              Number.isFinite(point?.y) &&
+              Number.isFinite(point?.z)
+            ) {
+              trace.packet.position.copy(point)
+            }
+          }
 
           trace.packet.rotation.x +=
             0.08 + index * 0.004
@@ -2567,6 +2598,7 @@ export default function NeuralCore({ onSelect }) {
       resizeObserver.disconnect()
 
       controls.dispose()
+      timer.dispose()
 
       scene.traverse(
         (object) => {
@@ -2638,7 +2670,7 @@ export default function NeuralCore({ onSelect }) {
         <span>NEURAL VISUALIZER STANDBY</span>
         <strong>3D GRAPHICS ARE UNAVAILABLE</strong>
         <p>
-          ULTRON remains available. You can use Agent, Memory, Devices and
+          Ultron AI remains available. You can use Agent, Memory, Devices and
           Settings while this environment has no WebGL renderer.
         </p>
       </div>
@@ -2649,7 +2681,7 @@ export default function NeuralCore({ onSelect }) {
     <div
       ref={mountRef}
       className="brain-renderer"
-      aria-label="ULTRON neural core"
+      aria-label="Ultron AI neural core"
     />
   )
 }

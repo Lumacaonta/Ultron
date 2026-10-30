@@ -6,13 +6,13 @@
 set -euo pipefail
 
 if [[ "$#" -ne 2 ]]; then
-  printf 'Usage: %s <ULTRON ai.app> <output.dmg>\n' "$0" >&2
+  printf 'Usage: %s <Ultron AI.app> <output.dmg>\n' "$0" >&2
   exit 1
 fi
 
 APP_PATH="$1"
 OUTPUT_PATH="$2"
-VOLUME_NAME="${ULTRON_DMG_VOLUME_NAME:-Install ULTRON ai}"
+VOLUME_NAME="${ULTRON_DMG_VOLUME_NAME:-Install Ultron AI}"
 CODESIGN_IDENTITY="${ULTRON_CODESIGN_IDENTITY:--}"
 WORK_DIR=''
 
@@ -46,17 +46,17 @@ STAGING_ROOT="$WORK_DIR/payload"
 mkdir -p "$STAGING_ROOT"
 
 # ditto preserves the bundle's signing metadata while copying its resources.
-ditto "$APP_PATH" "$STAGING_ROOT/ULTRON ai.app"
+ditto "$APP_PATH" "$STAGING_ROOT/Ultron AI.app"
 ln -s /Applications "$STAGING_ROOT/Applications"
 
 cat > "$STAGING_ROOT/START HERE.txt" <<'INSTALL_GUIDE'
-ULTRON for macOS
+Ultron AI for macOS
 
-1. Drag ULTRON ai.app onto the Applications folder in this window.
-2. Open ULTRON from Applications.
+1. Drag Ultron AI.app onto the Applications folder in this window.
+2. Open Ultron AI from Applications.
 3. Complete the short first-launch guide to connect only the features you use.
 
-ULTRON keeps its account profiles, memory and optional integrations on this Mac.
+Ultron AI keeps its account profiles, memory and optional integrations on this Mac.
 INSTALL_GUIDE
 
 create_disk_image() {

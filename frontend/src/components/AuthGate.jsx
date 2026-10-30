@@ -52,21 +52,21 @@ function AuthShell({ children, mode, setMode, feedback, feedbackTone, submitting
   return (
     <main className="auth-gate">
       <div className="auth-gate-grid" aria-hidden="true" />
-      <section className="auth-card" aria-label="ULTRON local account access">
+      <section className="auth-card" aria-label="Accesso all’account locale Ultron AI">
         <header className="auth-brand">
-          <img src="./ultron-mark.png" alt="ULTRON" />
+          <img src="./ultron-mark.png" alt="Ultron AI" />
           <div>
-            <span>ULTRON</span>
-            <strong>LOCAL INTELLIGENCE</strong>
+            <span>Ultron AI</span>
+            <strong>INTELLIGENZA LOCALE</strong>
           </div>
           <i aria-hidden="true" />
         </header>
 
         <div className="auth-copy">
-          <span className="auth-kicker">PRIVATE ACCESS CHANNEL</span>
-          <h1>{isLogin ? 'Unlock your local core' : mode === 'register' ? 'Create a local operator' : mode === 'verify' ? 'Verify email access' : mode === 'request-reset' ? 'Recover your access' : 'Set a new passphrase'}</h1>
+          <span className="auth-kicker">ACCESSO PRIVATO</span>
+          <h1>{isLogin ? 'Apri il tuo spazio locale' : mode === 'register' ? 'Crea il tuo spazio locale' : mode === 'verify' ? 'Verifica la tua email' : mode === 'request-reset' ? 'Recupera l’accesso' : 'Scegli una nuova password'}</h1>
           <p>
-            Account records and ULTRON memory stay on this computer. A mail server is used only when email verification or recovery is enabled.
+            Account e memoria restano su questo computer. L’email serve solo se scegli di attivare verifica o recupero accesso.
           </p>
         </div>
 
@@ -81,27 +81,27 @@ function AuthShell({ children, mode, setMode, feedback, feedbackTone, submitting
         <footer className="auth-footer">
           {isLogin && registrationEnabled !== false && (
             <button type="button" onClick={() => setMode('register')} disabled={submitting}>
-              Create a local account
+              Crea un account locale
             </button>
           )}
           {isLogin && (
             <button type="button" onClick={() => setMode('request-reset')} disabled={submitting}>
-              Forgot passphrase?
+              Hai dimenticato la password?
             </button>
           )}
           {mode === 'register' && (
             <button type="button" onClick={() => setMode('login')} disabled={submitting}>
-              Back to sign in
+              Torna all’accesso
             </button>
           )}
           {mode === 'verify' && (
             <button type="button" onClick={() => setMode('login')} disabled={submitting}>
-              Use another account
+              Usa un altro account
             </button>
           )}
           {(mode === 'request-reset' || mode === 'reset') && (
             <button type="button" onClick={() => setMode('login')} disabled={submitting}>
-              Back to sign in
+              Torna all’accesso
             </button>
           )}
         </footer>
@@ -143,7 +143,7 @@ export default function AuthGate({ children }) {
     const uninstallFetch = installAuthenticatedFetch(() => {
       leaveAccount()
       setFeedbackTone('error')
-      setFeedback('Your local session expired. Sign in again to continue.')
+      setFeedback('La sessione locale è scaduta. Accedi di nuovo per continuare.')
     })
     let disposed = false
 
@@ -170,7 +170,7 @@ export default function AuthGate({ children }) {
         setAuthConfig(loadedConfig)
       } else {
         setFeedbackTone('error')
-        setFeedback('The local authentication service is unavailable. Start the ULTRON Core and retry.')
+        setFeedback('Il servizio locale non è disponibile. Riavvia Ultron AI e riprova.')
       }
 
       if (accountResult.status === 'fulfilled' && accountResult.value?.user) {
@@ -200,7 +200,7 @@ export default function AuthGate({ children }) {
 
   async function beginSession(result, fallbackEmail = '') {
     if (!result?.token || !result?.user) {
-      throw new Error('The local core returned an incomplete session. Please try again.')
+      throw new Error('Ultron AI non ha completato l’accesso. Riprova.')
     }
 
     await setSessionToken(result.token)
@@ -212,8 +212,8 @@ export default function AuthGate({ children }) {
       setMode('verify')
       setFeedbackTone('success')
       setFeedback(result.verification_email_sent === false
-        ? 'Verification is required. Use the token sent by your mail service, or request a new one below.'
-        : 'A verification token was sent to your email address. Paste it below to unlock ULTRON.')
+        ? 'Serve la verifica: usa il codice del tuo servizio email oppure richiedine uno nuovo qui sotto.'
+        : 'Ti abbiamo inviato un codice via email. Incollalo qui sotto per aprire Ultron AI.')
       return
     }
 
@@ -228,7 +228,7 @@ export default function AuthGate({ children }) {
 
     if (mode === 'register' && form.password !== form.confirmPassword) {
       setFeedbackTone('error')
-      setFeedback('The two passphrases do not match.')
+      setFeedback('Le due password non coincidono.')
       return
     }
 
@@ -250,7 +250,7 @@ export default function AuthGate({ children }) {
 
       if (mode === 'verify') {
         const result = await verifyEmail(form.token.trim())
-        if (!result?.user) throw new Error('The verification response did not contain an account.')
+        if (!result?.user) throw new Error('La verifica non ha restituito un account valido.')
         setPendingEmail('')
         setForm(EMPTY_FORM)
 
@@ -260,7 +260,7 @@ export default function AuthGate({ children }) {
         } else {
           setMode('login')
           setFeedbackTone('success')
-          setFeedback('Email verified. Sign in to unlock your local core.')
+          setFeedback('Email verificata. Accedi per aprire il tuo spazio locale.')
         }
       }
 
@@ -280,11 +280,11 @@ export default function AuthGate({ children }) {
         setForm(EMPTY_FORM)
         setMode('login')
         setFeedbackTone('success')
-        setFeedback('Passphrase updated. You can sign in now.')
+        setFeedback('Password aggiornata. Ora puoi accedere.')
       }
     } catch (error) {
       setFeedbackTone('error')
-      setFeedback(error?.message || 'The request could not be completed.')
+      setFeedback(error?.message || 'Non è stato possibile completare la richiesta.')
     } finally {
       setSubmitting(false)
     }
@@ -294,7 +294,7 @@ export default function AuthGate({ children }) {
     const email = visibleEmail.trim()
     if (!email) {
       setFeedbackTone('error')
-      setFeedback('Enter the email address that should receive the verification token.')
+      setFeedback('Inserisci l’indirizzo email che deve ricevere il codice.')
       return
     }
 
@@ -302,10 +302,10 @@ export default function AuthGate({ children }) {
     try {
       const result = await resendVerification(email)
       setFeedbackTone('success')
-      setFeedback(result.message || 'If verification is available for this account, a new token has been sent.')
+      setFeedback(result.message || 'Se la verifica è attiva per questo account, ti abbiamo inviato un nuovo codice.')
     } catch (error) {
       setFeedbackTone('error')
-      setFeedback(error?.message || 'Unable to resend the verification token.')
+      setFeedback(error?.message || 'Non è stato possibile inviare un nuovo codice.')
     } finally {
       setSubmitting(false)
     }
@@ -325,8 +325,8 @@ export default function AuthGate({ children }) {
     return (
       <main className="auth-gate auth-gate-loading" aria-live="polite">
         <div className="auth-loading-mark"><img src="./ultron-mark.png" alt="" /></div>
-        <strong>CONNECTING TO LOCAL CORE</strong>
-        <span>Checking the private access channel…</span>
+        <strong>CONNESSIONE A Ultron AI</strong>
+        <span>Connessione allo spazio locale…</span>
       </main>
     )
   }
@@ -351,11 +351,11 @@ export default function AuthGate({ children }) {
         {mode === 'register' && (
           <AuthField
             id="auth-display-name"
-            label="Operator name"
+            label="Nome"
             value={form.displayName}
             onChange={value => updateField('displayName', value)}
             autoComplete="name"
-            hint="Shown only inside this local ULTRON installation."
+            hint="Visibile solo dentro questa installazione di Ultron AI."
             required={false}
           />
         )}
@@ -363,7 +363,7 @@ export default function AuthGate({ children }) {
         {(mode === 'login' || mode === 'register' || mode === 'request-reset') && (
           <AuthField
             id="auth-email"
-            label="Email address"
+            label="Indirizzo email"
             type="email"
             value={form.email}
             onChange={value => updateField('email', value)}
@@ -374,19 +374,19 @@ export default function AuthGate({ children }) {
         {(mode === 'login' || mode === 'register' || mode === 'reset') && (
           <AuthField
             id="auth-password"
-            label={mode === 'reset' ? 'New passphrase' : 'Passphrase'}
+            label={mode === 'reset' ? 'Nuova password' : 'Password'}
             type="password"
             value={form.password}
             onChange={value => updateField('password', value)}
             autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-            hint={mode === 'register' ? `Use at least ${passwordMinimum} characters.` : undefined}
+            hint={mode === 'register' ? `Usa almeno ${passwordMinimum} caratteri.` : undefined}
           />
         )}
 
         {(mode === 'register' || mode === 'reset') && (
           <AuthField
             id="auth-confirm-password"
-            label="Confirm passphrase"
+            label="Conferma password"
             type="password"
             value={form.confirmPassword}
             onChange={value => updateField('confirmPassword', value)}
@@ -397,38 +397,38 @@ export default function AuthGate({ children }) {
         {(mode === 'verify' || mode === 'reset') && (
           <AuthField
             id="auth-token"
-            label={mode === 'verify' ? 'Verification code' : 'Recovery code'}
+            label={mode === 'verify' ? 'Codice di verifica' : 'Codice di recupero'}
             value={form.token}
             onChange={value => updateField('token', value)}
             autoComplete="one-time-code"
             hint={mode === 'verify'
-              ? `Paste the one-time code sent to ${visibleEmail || 'your email address'}.`
-              : `Paste the one-time code sent to ${visibleEmail || 'your email address'}.`}
+              ? `Incolla il codice inviato a ${visibleEmail || 'questa email'}.`
+              : `Incolla il codice inviato a ${visibleEmail || 'questa email'}.`}
           />
         )}
 
         <button className="auth-primary" type="submit" disabled={submitting || (mode === 'register' && registrationEnabled === false)}>
           {submitting
-            ? 'PROCESSING…'
+            ? 'ATTENDI…'
             : mode === 'login'
-              ? 'UNLOCK ULTRON'
+              ? 'Apri Ultron AI'
               : mode === 'register'
-                ? 'CREATE LOCAL ACCOUNT'
+                ? 'CREA ACCOUNT LOCALE'
                 : mode === 'verify'
-                  ? 'VERIFY EMAIL'
+                  ? 'VERIFICA EMAIL'
                   : mode === 'request-reset'
-                    ? 'SEND RECOVERY TOKEN'
-                    : 'UPDATE PASSPHRASE'}
+                    ? 'INVIA CODICE DI RECUPERO'
+                    : 'AGGIORNA PASSWORD'}
         </button>
 
         {mode === 'verify' && (
           <button className="auth-secondary" type="button" onClick={handleResendVerification} disabled={submitting}>
-            RESEND VERIFICATION TOKEN
+            INVIA UN NUOVO CODICE
           </button>
         )}
 
         {mode === 'register' && registrationEnabled === false && (
-          <p className="auth-inline-note">New registrations are disabled in this ULTRON installation.</p>
+          <p className="auth-inline-note">La creazione di nuovi account non è attiva in questa installazione.</p>
         )}
       </form>
     </AuthShell>

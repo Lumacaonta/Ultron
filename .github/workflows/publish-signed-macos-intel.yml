@@ -128,11 +128,11 @@ jobs:
           NOTARIZED: ${{ inputs.notarize && 'true' || 'false' }}
         run: |
           VERSION="$(node -p "require('./desktop/package.json').version")"
-          ZIP_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-x64.zip"
+          ZIP_ARCHIVE="desktop/release/Ultron-AI-$VERSION-macos-x64.zip"
           ZIP_CHECKSUM="$ZIP_ARCHIVE.sha256"
-          DMG_ARCHIVE="desktop/release/ULTRON-ai-$VERSION-macos-x64.dmg"
+          DMG_ARCHIVE="desktop/release/Ultron-AI-$VERSION-macos-x64.dmg"
           DMG_CHECKSUM="$DMG_ARCHIVE.sha256"
-          CHECKSUM_MANIFEST="desktop/release/ULTRON-ai-$VERSION-macos-x64-SHA256SUMS.txt"
+          CHECKSUM_MANIFEST="desktop/release/Ultron-AI-$VERSION-macos-x64-SHA256SUMS.txt"
           ASSETS=(
             "$DMG_ARCHIVE" "$DMG_CHECKSUM"
             "$ZIP_ARCHIVE" "$ZIP_CHECKSUM"
@@ -159,7 +159,7 @@ jobs:
             gh release create "$TAG" \
               "${ASSETS[@]}" \
               --target "$GITHUB_SHA" \
-              --title "ULTRON $VERSION" \
+              --title "Ultron AI $VERSION" \
               --notes-file "$NOTES_FILE" \
               "${PRE_RELEASE_ARGUMENT[@]}"
           fi

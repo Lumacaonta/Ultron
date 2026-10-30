@@ -46,7 +46,7 @@ if ! ARCH="$(normalize_arch "${REQUESTED_ARCH}")"; then
 fi
 
 TARGET_MACHINE="$(machine_for_arch "${ARCH}")"
-DEFAULT_APP="${PROJECT_ROOT}/desktop/out/ULTRON ai-darwin-${ARCH}/ULTRON ai.app"
+DEFAULT_APP="${PROJECT_ROOT}/desktop/out/Ultron AI-darwin-${ARCH}/Ultron AI.app"
 PACKAGE_APP="${1:-${DEFAULT_APP}}"
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -134,7 +134,7 @@ if [[ "${arbitrary_loads}" != 'false' ]]; then
 fi
 
 for executable in \
-  "${PACKAGE_APP}/Contents/MacOS/ULTRON ai" \
+  "${PACKAGE_APP}/Contents/MacOS/Ultron AI" \
   "${PACKAGE_APP}/Contents/Resources/backend/ultron-backend"; do
   if [[ ! -x "${executable}" ]]; then
     printf 'Required %s executable is missing: %s\n' "${ARCH}" "${executable}" >&2
@@ -210,5 +210,5 @@ if grep -REni '/Users/|/home/|C:\\Users\\' \
   exit 1
 fi
 
-printf 'ULTRON %s release package verified: %s (%s)\n' \
+printf 'Ultron AI %s release package verified: %s (%s)\n' \
   "${ARCH}" "${bundle_id}" "${version}"

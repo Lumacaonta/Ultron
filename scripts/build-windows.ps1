@@ -129,8 +129,8 @@ New-Item -ItemType File -Path (Join-Path $BackendTargetDirectory '.gitkeep') -Fo
 $ForgeAction = if ($Make) { 'make:win' } else { 'package:win' }
 Invoke-Npm -Arguments @('--prefix', $DesktopRoot, 'run', $ForgeAction)
 
-$PackageDirectory = Join-Path $DesktopOut "ULTRON ai-win32-$Architecture"
-$PackageExecutable = Join-Path $PackageDirectory 'ULTRON ai.exe'
+$PackageDirectory = Join-Path $DesktopOut "Ultron AI-win32-$Architecture"
+$PackageExecutable = Join-Path $PackageDirectory 'Ultron AI.exe'
 if (-not (Test-Path -LiteralPath $PackageExecutable -PathType Leaf)) {
     throw "Electron packaging did not create $PackageExecutable."
 }

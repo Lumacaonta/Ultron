@@ -92,9 +92,9 @@ else:
 PYTHON
 )"
 
-APP_PATH="$MOUNT_POINT/ULTRON ai.app"
+APP_PATH="$MOUNT_POINT/Ultron AI.app"
 if [[ ! -d "$APP_PATH" ]]; then
-  printf 'Installer does not contain ULTRON ai.app.\n' >&2
+  printf 'Installer does not contain Ultron AI.app.\n' >&2
   exit 1
 fi
 
@@ -105,7 +105,7 @@ if [[ ! -L "$MOUNT_POINT/Applications" ]] ||
 fi
 
 if [[ ! -f "$MOUNT_POINT/START HERE.txt" ]] ||
-  ! grep -Fq 'Drag ULTRON ai.app' "$MOUNT_POINT/START HERE.txt"; then
+  ! grep -Fq 'Drag Ultron AI.app' "$MOUNT_POINT/START HERE.txt"; then
   printf 'Installer guide is missing or incomplete.\n' >&2
   exit 1
 fi
@@ -114,7 +114,7 @@ codesign --verify --deep --strict "$APP_PATH"
 
 if [[ -n "${ARCH}" ]]; then
   for executable in \
-    "$APP_PATH/Contents/MacOS/ULTRON ai" \
+    "$APP_PATH/Contents/MacOS/Ultron AI" \
     "$APP_PATH/Contents/Resources/backend/ultron-backend"; do
     if [[ ! -x "${executable}" ]]; then
       printf 'Installer is missing its %s executable: %s\n' \
@@ -138,4 +138,4 @@ fi
 hdiutil detach "$DEVICE" -quiet
 DEVICE=''
 
-printf 'ULTRON macOS installer verified: %s\n' "$DMG_PATH"
+printf 'Ultron AI macOS installer verified: %s\n' "$DMG_PATH"

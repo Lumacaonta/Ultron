@@ -62,11 +62,11 @@ mkdir -p "${RELEASE_DIR}"
 # A new Intel build must not erase a verified Apple Silicon download (and vice
 # versa), while stale files for the target architecture must never be reused.
 find "${RELEASE_DIR}" -maxdepth 1 -type f \
-  -name "ULTRON-ai-*-macos-${ARCH}*" -delete
+  -name "Ultron-AI-*-macos-${ARCH}*" -delete
 
 ULTRON_ARCH="${ARCH}" PYTHON_BIN="${PYTHON_BIN}" "${SCRIPT_DIR}/build-macos.sh"
 
-PACKAGE_APP="${PROJECT_ROOT}/desktop/out/ULTRON ai-darwin-${ARCH}/ULTRON ai.app"
+PACKAGE_APP="${PROJECT_ROOT}/desktop/out/Ultron AI-darwin-${ARCH}/Ultron AI.app"
 ULTRON_ARCH="${ARCH}" "${SCRIPT_DIR}/verify-release.sh" "${PACKAGE_APP}"
 
 if [[ "${NOTARIZE}" == "1" ]]; then
@@ -74,11 +74,11 @@ if [[ "${NOTARIZE}" == "1" ]]; then
 fi
 
 VERSION="$(plutil -extract CFBundleShortVersionString raw "${PACKAGE_APP}/Contents/Info.plist")"
-ZIP_ARCHIVE="${RELEASE_DIR}/ULTRON-ai-${VERSION}-macos-${ARCH}.zip"
+ZIP_ARCHIVE="${RELEASE_DIR}/Ultron-AI-${VERSION}-macos-${ARCH}.zip"
 ZIP_CHECKSUM="${ZIP_ARCHIVE}.sha256"
-DMG_ARCHIVE="${RELEASE_DIR}/ULTRON-ai-${VERSION}-macos-${ARCH}.dmg"
+DMG_ARCHIVE="${RELEASE_DIR}/Ultron-AI-${VERSION}-macos-${ARCH}.dmg"
 DMG_CHECKSUM="${DMG_ARCHIVE}.sha256"
-CHECKSUM_MANIFEST="${RELEASE_DIR}/ULTRON-ai-${VERSION}-macos-${ARCH}-SHA256SUMS.txt"
+CHECKSUM_MANIFEST="${RELEASE_DIR}/Ultron-AI-${VERSION}-macos-${ARCH}-SHA256SUMS.txt"
 
 ditto -c -k --sequesterRsrc --keepParent "${PACKAGE_APP}" "${ZIP_ARCHIVE}"
 "${SCRIPT_DIR}/create-macos-dmg.sh" "${PACKAGE_APP}" "${DMG_ARCHIVE}"

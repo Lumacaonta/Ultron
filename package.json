@@ -1,9 +1,9 @@
 {
   "name": "ultron-ai",
-  "productName": "ULTRON ai",
+  "productName": "Ultron AI",
   "version": "1.3.0",
   "description": "Local-first desktop AI workspace",
   "main": "main.cjs",
-  "author": "ULTRON contributors",
+  "author": "Ultron AI contributors",
   "license": "MIT"
 }

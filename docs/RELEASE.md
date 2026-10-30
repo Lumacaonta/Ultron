@@ -1,6 +1,6 @@
 # Release guide
 
-ULTRON is a local-first desktop application. A public binary is a separate
+Ultron AI is a local-first desktop application. A public binary is a separate
 deliverable from public source code: it must be built on the matching operating
 system and processor, pass source and package checks, and carry the correct
 signing status in the release notes.
@@ -9,9 +9,9 @@ This guide covers three native outputs:
 
 | Target | Native build command | Published installer |
 | --- | --- | --- |
-| macOS Apple Silicon | ./scripts/release-macos-arm64.sh | ULTRON-ai-<version>-macos-arm64.dmg |
-| macOS Intel | ./scripts/release-macos-x64.sh | ULTRON-ai-<version>-macos-x64.dmg |
-| Windows x64 | pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-windows-x64.ps1 | ULTRON-ai-<version>-windows-x64-Setup.exe |
+| macOS Apple Silicon | ./scripts/release-macos-arm64.sh | Ultron-AI-<version>-macos-arm64.dmg |
+| macOS Intel | ./scripts/release-macos-x64.sh | Ultron-AI-<version>-macos-x64.dmg |
+| Windows x64 | pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-windows-x64.ps1 | Ultron-AI-<version>-windows-x64-Setup.exe |
 
 Read [platform support](PLATFORM_SUPPORT.md) before publishing. A platform is
 supported only when its matching artifact is attached to the GitHub release.
@@ -67,14 +67,14 @@ Run this on an Apple Silicon Mac or an Apple Silicon GitHub runner:
 The output is written below desktop/release:
 
 ~~~text
-ULTRON-ai-<version>-macos-arm64.dmg
-ULTRON-ai-<version>-macos-arm64.dmg.sha256
-ULTRON-ai-<version>-macos-arm64.zip
-ULTRON-ai-<version>-macos-arm64.zip.sha256
-ULTRON-ai-<version>-macos-arm64-SHA256SUMS.txt
+Ultron-AI-<version>-macos-arm64.dmg
+Ultron-AI-<version>-macos-arm64.dmg.sha256
+Ultron-AI-<version>-macos-arm64.zip
+Ultron-AI-<version>-macos-arm64.zip.sha256
+Ultron-AI-<version>-macos-arm64-SHA256SUMS.txt
 ~~~
 
-The DMG is the recommended installer. It contains ULTRON ai.app, an
+The DMG is the recommended installer. It contains Ultron AI.app, an
 Applications shortcut and a short installation note. A person using the DMG
 does not need Node.js, Python, Git or a developer .env file.
 
@@ -82,7 +82,7 @@ Verify the completed archive from its release directory:
 
 ~~~bash
 cd desktop/release
-shasum -a 256 -c ULTRON-ai-<version>-macos-arm64-SHA256SUMS.txt
+shasum -a 256 -c Ultron-AI-<version>-macos-arm64-SHA256SUMS.txt
 ~~~
 
 ## macOS Intel
@@ -99,18 +99,18 @@ It creates the same DMG, ZIP and checksum set with **macos-x64** in each file
 name:
 
 ~~~text
-ULTRON-ai-<version>-macos-x64.dmg
-ULTRON-ai-<version>-macos-x64.dmg.sha256
-ULTRON-ai-<version>-macos-x64.zip
-ULTRON-ai-<version>-macos-x64.zip.sha256
-ULTRON-ai-<version>-macos-x64-SHA256SUMS.txt
+Ultron-AI-<version>-macos-x64.dmg
+Ultron-AI-<version>-macos-x64.dmg.sha256
+Ultron-AI-<version>-macos-x64.zip
+Ultron-AI-<version>-macos-x64.zip.sha256
+Ultron-AI-<version>-macos-x64-SHA256SUMS.txt
 ~~~
 
 Verify it with:
 
 ~~~bash
 cd desktop/release
-shasum -a 256 -c ULTRON-ai-<version>-macos-x64-SHA256SUMS.txt
+shasum -a 256 -c Ultron-AI-<version>-macos-x64-SHA256SUMS.txt
 ~~~
 
 ## Windows x64
@@ -128,11 +128,11 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/release-windows-x64.ps1
 The release directory receives:
 
 ~~~text
-ULTRON-ai-<version>-windows-x64-Setup.exe
-ULTRON-ai-<version>-windows-x64-Setup.exe.sha256
-ULTRON-ai-<version>-windows-x64.zip
-ULTRON-ai-<version>-windows-x64.zip.sha256
-ULTRON-ai-<version>-windows-x64-SHA256SUMS.txt
+Ultron-AI-<version>-windows-x64-Setup.exe
+Ultron-AI-<version>-windows-x64-Setup.exe.sha256
+Ultron-AI-<version>-windows-x64.zip
+Ultron-AI-<version>-windows-x64.zip.sha256
+Ultron-AI-<version>-windows-x64-SHA256SUMS.txt
 ~~~
 
 The Setup EXE is the recommended installer. The ZIP is portable and should be
@@ -140,7 +140,7 @@ extracted to a folder owned by the person using it. Verify a Windows download
 with the manifest or by comparing a file hash:
 
 ~~~powershell
-Get-FileHash -Algorithm SHA256 ./ULTRON-ai-<version>-windows-x64-Setup.exe
+Get-FileHash -Algorithm SHA256 ./Ultron-AI-<version>-windows-x64-Setup.exe
 ~~~
 
 The Windows package includes the local core, accounts, memory, Ollama,

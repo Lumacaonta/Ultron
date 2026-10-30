@@ -60,4 +60,4 @@ expectIncludes(auth, 'syncDesktopSessionToken(token)', 'The renderer must synchr
 expectIncludes(auth, 'clearDesktopSessionToken()', 'The renderer must clear the Electron session on logout.')
 expectIncludes(authGate, 'await setSessionToken(result.token)', 'Authentication must synchronize the session before opening the app.')
 
-console.log('ULTRON desktop bridge security contract verified')
+console.log('Ultron AI desktop bridge security contract verified')

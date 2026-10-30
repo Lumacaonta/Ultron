@@ -1,6 +1,6 @@
 # Platform support
 
-ULTRON packages the React interface and local FastAPI core together. Every
+Ultron AI packages the React interface and local FastAPI core together. Every
 download must be built on a native runner for its operating system and CPU.
 This prevents a release from combining an Electron shell for one architecture
 with a Python core compiled for another.
@@ -20,20 +20,20 @@ release and its native release workflow has completed successfully.
 
 ### Mac with Apple Silicon
 
-Download the file ending in **-macos-arm64.dmg**, open it and drag **ULTRON
-ai.app** into **Applications**. Do not download the Intel file for an M-series
+Download the file ending in **-macos-arm64.dmg**, open it and drag **Ultron
+AI.app** into **Applications**. Do not download the Intel file for an M-series
 Mac.
 
 ### Mac with an Intel processor
 
-Download the file ending in **-macos-x64.dmg**, open it and drag **ULTRON
-ai.app** into **Applications**. Do not download the Apple Silicon file for an
+Download the file ending in **-macos-x64.dmg**, open it and drag **Ultron
+AI.app** into **Applications**. Do not download the Apple Silicon file for an
 Intel Mac.
 
 ### Windows x64
 
 Download the file ending in **-windows-x64-Setup.exe**. Run the installer and
-start **ULTRON ai** from the Start menu. The ZIP is portable: extract it into a
+start **Ultron AI** from the Start menu. The ZIP is portable: extract it into a
 folder you control, then start the included application. It does not update
 itself.
 
@@ -63,7 +63,7 @@ and use the Quick Tour to enable only the integrations you want.
 
 Windows does not claim macOS Mail or macOS Internet Accounts support. A future
 Windows mail integration needs its own reviewed provider or OAuth design; it
-must not store a Google password in ULTRON.
+must not store a Google password in Ultron AI.
 
 ## Candidate versus normal release
 

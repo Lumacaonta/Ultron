@@ -5,7 +5,6 @@ import {
   BackSide,
   BufferGeometry,
   CanvasTexture,
-  Clock,
   CylinderGeometry,
   DoubleSide,
   Float32BufferAttribute,
@@ -30,6 +29,7 @@ import {
   SphereGeometry,
   Sprite,
   SpriteMaterial,
+  Timer,
   Vector3,
   WebGLRenderer,
   WireframeGeometry
@@ -408,9 +408,11 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
     } else window.addEventListener('resize', resize)
 
     let frameId = 0
-    const clock = new Clock()
+    const timer = new Timer()
+    timer.connect(document)
     const render = () => {
-      const elapsed = clock.getElapsedTime()
+      timer.update()
+      const elapsed = timer.getElapsed()
       const reducedMotion = document.documentElement.classList.contains('ultron-reduced-motion')
       if (!reducedMotion) {
         shell.rotation.y += 0.00035
@@ -445,6 +447,7 @@ export default function GlobalPositionGlobe({ latitude, longitude, label, active
       renderer.dispose()
       renderer.forceContextLoss?.()
       renderer.domElement.remove()
+      timer.dispose()
       runtimeRef.current = null
     }
   }, [renderUnavailable])

@@ -181,14 +181,24 @@ function rendererFileForRequest(requestUrl) {
 }
 
 function registerRendererProtocol() {
-  protocol.handle(RENDERER_SCHEME, request => {
+  protocol.handle(RENDERER_SCHEME, async request => {
     const file = rendererFileForRequest(request.url)
 
     if (!file || !fs.existsSync(file)) {
       return new Response('Not found', { status: 404 })
     }
 
-    return electronNet.fetch(pathToFileURL(file).toString())
+    // The renderer is packaged locally and is replaced on every update. Do
+    // not let Chromium reuse an older HTML shell or asset after an app update.
+    const response = await electronNet.fetch(pathToFileURL(file).toString())
+    const headers = new Headers(response.headers)
+    headers.set('Cache-Control', 'no-store')
+
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    })
   })
 }
 
@@ -260,13 +270,13 @@ function callDesktopBackend(pathname, payload) {
     !backendDesktopPickerSecret
   ) {
     return Promise.reject(
-      new Error('The ULTRON Core is not ready.')
+      new Error('Ultron AI is not ready.')
     )
   }
 
   if (!backendSessionToken) {
     return Promise.reject(
-      new Error('Sign in to ULTRON before selecting a local file or application.')
+      new Error('Sign in to Ultron AI before selecting a local file or application.')
     )
   }
 
@@ -295,7 +305,7 @@ function callDesktopBackend(pathname, payload) {
           responseBody += chunk
           if (responseBody.length > 1024 * 1024) {
             request.destroy()
-            reject(new Error('The ULTRON Core returned an invalid response.'))
+            reject(new Error('The Ultron AI Core returned an invalid response.'))
           }
         })
         response.on('end', () => {
@@ -303,7 +313,7 @@ function callDesktopBackend(pathname, payload) {
           try {
             parsed = JSON.parse(responseBody || '{}')
           } catch {
-            reject(new Error('The ULTRON Core returned an invalid response.'))
+            reject(new Error('The Ultron AI Core returned an invalid response.'))
             return
           }
 
@@ -316,7 +326,7 @@ function callDesktopBackend(pathname, payload) {
               new Error(
                 parsed?.detail ||
                 parsed?.error ||
-                'The ULTRON Core could not register this local selection.'
+                'Ultron AI could not register this local selection.'
               )
             )
             return
@@ -329,7 +339,7 @@ function callDesktopBackend(pathname, payload) {
 
     request.once('timeout', () => {
       request.destroy()
-      reject(new Error('The ULTRON Core did not respond in time.'))
+      reject(new Error('Ultron AI did not respond in time.'))
     })
     request.once('error', reject)
     request.end(body)
@@ -657,7 +667,7 @@ function createWindow(showWhenReady = false) {
       minWidth: 1100,
       minHeight: 700,
 
-      title: 'ULTRON ai',
+      title: 'Ultron AI',
       backgroundColor: '#030303',
       icon: APP_ICON,
 
@@ -819,9 +829,9 @@ app.whenReady().then(
       )
       await dialog.showMessageBox({
         type: 'error',
-        title: 'ULTRON could not start',
-        message: 'The local ULTRON Core did not start.',
-        detail: 'Restart ULTRON. If this continues, reinstall the application from a complete package.',
+        title: 'Ultron AI could not start',
+        message: 'The local Ultron AI Core did not start.',
+        detail: 'Restart Ultron AI. If this continues, reinstall the application from a complete package.',
       })
       app.quit()
       return

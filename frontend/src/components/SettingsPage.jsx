@@ -387,7 +387,7 @@ export default function SettingsPage({
       }
       setSkills(Array.isArray(result.skills) ? result.skills : [])
     } catch (error) {
-      setSkillsError(error?.message || 'ULTRON Core is unavailable.')
+      setSkillsError(error?.message || 'Il Core di Ultron AI non è disponibile.')
     } finally {
       setSkillsLoading(false)
     }
@@ -658,8 +658,8 @@ export default function SettingsPage({
     return (
       <p className="settings-note">
         {skillAction === 'research'
-          ? 'The command will send its text to ULTRON Web Research.'
-          : 'The command will continue in the normal ULTRON conversation.'}
+          ? 'Il comando invierà il testo alla ricerca web di Ultron AI.'
+          : 'Il comando continuerà nella normale conversazione con Ultron AI.'}
       </p>
     )
   }
@@ -668,12 +668,12 @@ export default function SettingsPage({
     return (
       <>
         <SettingsCard title="Core status" kicker="LOCAL ASSISTANT">
-          <SettingRow title="ULTRON Core" description="The local backend that powers chat, memory and telemetry.">
+          <SettingRow title="Core Ultron AI" description="Il backend locale che gestisce chat, memoria e telemetria.">
             <span className={`settings-status ${backendOnline ? 'online' : ''}`}>
               {backendOnline ? '● ONLINE' : '○ OFFLINE'}
             </span>
           </SettingRow>
-          <SettingRow title="Voice replies" description="Speak ULTRON replies through the configured voice.">
+          <SettingRow title="Risposte vocali" description="Leggi le risposte di Ultron AI con la voce configurata.">
             <Toggle
               label="Voice replies"
               value={preferences.voiceEnabled}
@@ -812,7 +812,7 @@ export default function SettingsPage({
   function renderAppearance() {
     return (
       <SettingsCard title="Interface" kicker="APPEARANCE">
-        <SettingRow title="Interface scale" description="Adjust text and controls across ULTRON.">
+        <SettingRow title="Scala interfaccia" description="Regola testo e controlli in Ultron AI.">
           <div className="settings-range-wrap">
             <input type="range" min="90" max="125" step="5" value={preferences.scale} onChange={event => setPreference('scale', Number(event.target.value))} />
             <strong>{preferences.scale}%</strong>
@@ -821,7 +821,7 @@ export default function SettingsPage({
         <SettingRow title="Ambient motion" description="Animate the dashboard background and interface feedback.">
           <Toggle label="Ambient motion" value={preferences.motionEnabled} onChange={value => setPreference('motionEnabled', value)} />
         </SettingRow>
-        <SettingRow title="Dock icon" description="The ULTRON neural-core mark is installed with the desktop app.">
+        <SettingRow title="Icona Dock" description="Il simbolo del Neural Core di Ultron AI viene installato con l’app desktop.">
           <span className="settings-status online">● READY</span>
         </SettingRow>
       </SettingsCard>
@@ -878,7 +878,7 @@ export default function SettingsPage({
     return (
       <>
         <SettingsCard title="Mail & Gmail" kicker="LOCAL ACCOUNT LINK">
-          <SettingRow title="Google sign-in" description="Open Google sign-in in your browser. On macOS you can also add Gmail through Internet Accounts. ULTRON never stores your Google password or token.">
+          <SettingRow title="Accesso Google" description="Apri l’accesso Google nel browser. Su macOS puoi aggiungere Gmail anche da Account Internet. Ultron AI non conserva mai la password o i token Google.">
             <button type="button" className="settings-primary" onClick={connectGmail}>CONNECT GMAIL</button>
           </SettingRow>
           <SettingRow title="Local mail" description="macOS Mail can read configured accounts. Every desktop build can open Gmail and a reviewed draft in your own mail application.">
@@ -952,7 +952,7 @@ export default function SettingsPage({
             <form onSubmit={saveSkill}>
               <div className="settings-field"><label>NAME</label><input className="settings-input" value={skillName} onChange={event => setSkillName(event.target.value)} placeholder="Open Docker" /></div>
               <div className="settings-field"><label>DESCRIPTION</label><textarea className="settings-textarea" value={skillDescription} onChange={event => setSkillDescription(event.target.value)} placeholder="Open Docker Desktop." /></div>
-              <div className="settings-field"><label>COMMAND</label><input className="settings-input" value={skillTrigger} onChange={event => setSkillTrigger(event.target.value)} placeholder="apri docker" /><small>The phrase you say to ULTRON.</small></div>
+              <div className="settings-field"><label>COMMAND</label><input className="settings-input" value={skillTrigger} onChange={event => setSkillTrigger(event.target.value)} placeholder="apri docker" /><small>La frase da dire a Ultron AI.</small></div>
               <div className="settings-field"><label>ACTION</label><select className="settings-select" value={skillAction} onChange={event => setSkillAction(event.target.value)}><option value="open_app">OPEN LOCAL APP</option><option value="open_url">OPEN URL</option><option value="research">WEB RESEARCH</option><option value="ask_ai">AI REQUEST</option></select></div>
               {renderSkillTarget()}
               <div className="settings-actions">
@@ -1007,7 +1007,7 @@ export default function SettingsPage({
       </aside>
       <section className="settings-content">
         <header className="settings-header">
-          <div><span>ULTRON CONTROL CENTER</span><h2>{SECTIONS.find(([id]) => id === activeSection)?.[1] || 'GENERAL'}</h2></div>
+          <div><span>Ultron AI Control Center</span><h2>{SECTIONS.find(([id]) => id === activeSection)?.[1] || 'GENERAL'}</h2></div>
           <span className={`settings-header-status ${backendOnline ? 'online' : ''}`}>{backendOnline ? '● CORE ONLINE' : '○ CORE OFFLINE'}</span>
         </header>
         <div className="settings-scroll">

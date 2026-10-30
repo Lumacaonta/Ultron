@@ -18,15 +18,15 @@ class UltronErrorBoundary extends Component {
     if (this.state.failed) {
       return (
         <main className="ultron-recovery-screen" role="alert">
-          <img src="./ultron-mark.png" alt="ULTRON" />
+          <img src="./ultron-mark.png" alt="Ultron AI" />
           <span>LOCAL CORE INTERFACE</span>
-          <h1>ULTRON NEEDS TO RELOAD</h1>
+          <h1>Ultron AI deve ricaricarsi</h1>
           <p>
             The local interface encountered an unexpected display error. Your
             local account data and vaults were not changed.
           </p>
           <button type="button" onClick={() => window.location.reload()}>
-            RELOAD ULTRON
+            Ricarica Ultron AI
           </button>
         </main>
       )

@@ -451,7 +451,7 @@ function PrinterConnectionHub({ backendOnline, printerStatus, onConnectionChange
         <div>
           <span>FABRICATION LINK MATRIX // EXPLICIT LOCAL CONNECTIONS</span>
           <h2>Printer Connection Center</h2>
-          <p>Save one local profile, test it read-only, then choose when ULTRON may monitor it.</p>
+          <p>Salva un profilo locale, provalo in sola lettura e scegli quando Ultron AI può monitorarlo.</p>
         </div>
         <div className="device-printer-connection-state" data-online={printerStatus?.connected ? 'true' : 'false'}>
           <StatusPip active={Boolean(printerStatus?.connected)} />
@@ -508,7 +508,7 @@ function PrinterConnectionHub({ backendOnline, printerStatus, onConnectionChange
               <button type="button" className="device-control device-control-quiet" onClick={() => void loadConnectionData({ refreshPorts: true })} disabled={!backendOnline || loading || Boolean(action)}>
                 {loading ? 'READING PORTS…' : 'REFRESH USB PORTS'}
               </button>
-              <p className="device-printer-field-note">Port discovery only reads macOS metadata. ULTRON opens a selected port only when you test or connect it.</p>
+              <p className="device-printer-field-note">La ricerca porte legge solo i metadati di macOS. Ultron AI apre una porta selezionata soltanto durante un test o una connessione.</p>
             </>
           )}
 
@@ -585,7 +585,7 @@ export default function DevicesPage({
   ]
 
   return (
-    <section className="devices-command-center" aria-label="ULTRON device command center">
+    <section className="devices-command-center" aria-label="Centro dispositivi Ultron AI">
       <header className="devices-command-header">
         <div className="devices-command-title">
           <span>INFRASTRUCTURE CONTROL // LOCAL DOMAIN</span>
@@ -724,7 +724,7 @@ export default function DevicesPage({
         <div className="device-network-roster-grid">
           <article data-online={coreOnline ? 'true' : 'false'}>
             <StatusPip active={coreOnline} />
-            <div><span>ULTRON BACKEND</span><strong>{coreOnline ? 'ONLINE' : 'OFFLINE'}</strong></div>
+            <div><span>Ultron AI Backend</span><strong>{coreOnline ? 'ONLINE' : 'OFFLINE'}</strong></div>
             <small>127.0.0.1 // LOCAL</small>
           </article>
           <article data-online={printerConnected ? 'true' : 'false'}>

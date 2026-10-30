@@ -634,7 +634,7 @@ def main() -> None:
         _check_mail_code_and_tls(temporary_root)
         _check_backend(temporary_root)
 
-    print("ULTRON security smoke test passed")
+    print("Ultron AI security smoke test passed")
 
 
 if __name__ == "__main__":

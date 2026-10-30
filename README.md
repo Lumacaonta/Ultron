@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="frontend/public/ultron-mark.png" width="132" alt="ULTRON mark" />
+  <img src="frontend/public/ultron-mark.png" width="132" alt="Ultron AI mark" />
 </p>
 
-<h1 align="center">ULTRON</h1>
+<h1 align="center">Ultron AI</h1>
 
 <p align="center">
   <strong>A private, local-first AI command center for macOS and Windows.</strong><br />
@@ -26,10 +26,10 @@
   <a href="docs/RELEASE.md">Release guide</a>
 </p>
 
-## See ULTRON in action
+## See Ultron AI in action
 
 <p align="center">
-  <img src="docs/images/ultron-neural-core.jpg" alt="ULTRON Neural Core command center" width="100%" />
+  <img src="docs/images/ultron-neural-core.jpg" alt="Ultron AI Neural Core command center" width="100%" />
 </p>
 
 <p align="center"><em>The Neural Core: a local command center for the agent, memory, devices and system telemetry.</em></p>
@@ -37,12 +37,12 @@
 <table>
   <tr>
     <td width="50%" valign="top">
-      <img src="docs/images/ultron-devices-command.jpg" alt="ULTRON Device Command and Printer Connection Center" />
+      <img src="docs/images/ultron-devices-command.jpg" alt="Ultron AI Device Command and Printer Connection Center" />
       <strong>Device Command</strong><br />
       Monitor the Mac, choose an explicit printer connection and open the 3D workflow from one local panel.
     </td>
     <td width="50%" valign="top">
-      <img src="docs/images/ultron-model-deck.jpg" alt="ULTRON Model Deck with software bridge" />
+      <img src="docs/images/ultron-model-deck.jpg" alt="Ultron AI Model Deck with software bridge" />
       <strong>Model Deck</strong><br />
       Inspect local fabrication assets and hand the selected file to a local slicer, CAD tool or printer studio.
     </td>
@@ -54,7 +54,7 @@ _All screenshots use an isolated demo operator. They contain no vault, email, se
 ---
 
 > [!IMPORTANT]
-> ULTRON keeps accounts, memory and its core on the local computer. Each
+> Ultron AI keeps accounts, memory and its core on the local computer. Each
 > platform package is built natively and only appears on GitHub Releases after
 > its own verification workflow succeeds.
 
@@ -62,16 +62,16 @@ _All screenshots use an isolated demo operator. They contain no vault, email, se
 
 ## Download and first launch
 
-[**Open ULTRON downloads →**](https://github.com/Lumacaonta/Ultron/releases)
+[**Open Ultron AI downloads →**](https://github.com/Lumacaonta/Ultron-AI/releases)
 
 Choose an asset that exactly matches the computer. The release page shows only
 the platforms that completed a native release workflow:
 
 | Computer | Download name | Install |
 | --- | --- | --- |
-| Mac with M1, M2, M3, M4 or later | **-macos-arm64.dmg** | Open the DMG and drag **ULTRON ai.app** to **Applications**. |
-| Mac with an Intel processor | **-macos-x64.dmg** | Open the DMG and drag **ULTRON ai.app** to **Applications**. |
-| 64-bit Windows 10 or Windows 11 | **-windows-x64-Setup.exe** | Run Setup, then start **ULTRON ai** from the Start menu. |
+| Mac with M1, M2, M3, M4 or later | **-macos-arm64.dmg** | Open the DMG and drag **Ultron AI.app** to **Applications**. |
+| Mac with an Intel processor | **-macos-x64.dmg** | Open the DMG and drag **Ultron AI.app** to **Applications**. |
+| 64-bit Windows 10 or Windows 11 | **-windows-x64-Setup.exe** | Run Setup, then start **Ultron AI** from the Start menu. |
 
 Each platform also has a portable ZIP and SHA-256 checksums. Use the ZIP only
 when you specifically want a portable copy; the DMG and Setup installer are
@@ -100,15 +100,15 @@ before downloading a candidate.
 | **Memory Vault** | Store only confirmed memories; browse an Obsidian vault without importing it automatically. |
 | **Model Deck** | Catalog any selected local fabrication file. Inspect supported meshes and toolpaths in-app; hand CAD, slicer and other native formats to Cura, Bambu Studio, OrcaSlicer, PrusaSlicer or a linked local app after an explicit action. |
 | **Device Control** | See local system activity and configure one explicit printer profile: Marlin-compatible USB, OctoPrint on local Wi-Fi/Ethernet, or Klipper/Moonraker on local Wi-Fi/Ethernet. |
-| **Accounts and Mail** | Create local email/password accounts with isolated ULTRON profiles; optionally configure SMTP verification and recovery codes. macOS Mail actions are available only on macOS. |
+| **Accounts and Mail** | Create local email/password accounts with isolated Ultron AI profiles; optionally configure SMTP verification and recovery codes. macOS Mail actions are available only on macOS. |
 
 ### Local by default
 
 - **Ollama** powers chat and memory extraction on your machine.
-- **Obsidian** remains your vault. ULTRON reads it on demand and writes only after an explicit action.
+- **Obsidian** remains your vault. Ultron AI reads it on demand and writes only after an explicit action.
 - **Cura, Bambu Studio, OrcaSlicer, PrusaSlicer, the local file manager, Mail on macOS and serial devices** are called only after an explicit action.
-- **Printer telemetry** is read-only. ULTRON does not upload jobs, move axes, set temperatures or discover devices across your network.
-- **No ULTRON cloud account, cloud sync or telemetry pipeline** is included.
+- **Printer telemetry** is read-only. Ultron AI does not upload jobs, move axes, set temperatures or discover devices across your network.
+- **No Ultron AI cloud account, cloud sync or telemetry pipeline** is included.
 
 ---
 
@@ -116,7 +116,7 @@ before downloading a candidate.
 
 ```mermaid
 flowchart LR
-    A[ULTRON desktop shell] --> B[React interface]
+    A[Ultron AI desktop shell] --> B[React interface]
     A --> C[FastAPI local core]
     C --> D[Ollama<br/>127.0.0.1]
     C --> E[Account profiles<br/>local private-profile storage]
@@ -135,7 +135,7 @@ The packaged application serves its interface from `ultron://app`, starts the lo
 
 ## Build and run from source (developers)
 
-This section is for people who want to modify ULTRON or run it from a cloned
+This section is for people who want to modify Ultron AI or run it from a cloned
 repository. It is separate from installing the downloadable app above.
 
 ### 1. Install the prerequisites
@@ -150,8 +150,8 @@ repository. It is separate from installing the downloadable app above.
 On macOS:
 
 ```bash
-git clone https://github.com/Lumacaonta/Ultron.git
-cd Ultron
+git clone https://github.com/Lumacaonta/Ultron-AI.git
+cd Ultron-AI
 ./scripts/bootstrap.sh
 ```
 
@@ -161,8 +161,8 @@ environment and reproducible Node dependency installs from the lockfiles.
 On Windows, use native 64-bit PowerShell and run the matching bootstrap script:
 
 ```powershell
-git clone https://github.com/Lumacaonta/Ultron.git
-cd Ultron
+git clone https://github.com/Lumacaonta/Ultron-AI.git
+cd Ultron-AI
 pwsh -NoProfile -ExecutionPolicy Bypass -File ./scripts/bootstrap-windows.ps1
 ```
 
@@ -174,13 +174,13 @@ The downloaded installer does not use either of these developer setup paths.
 
 ### 3. Install a local model
 
-ULTRON uses `llama3.2` by default. Browse available sizes on the [official Ollama Llama 3.2 page](https://ollama.com/library/llama3.2).
+Ultron AI uses `llama3.2` by default. Browse available sizes on the [official Ollama Llama 3.2 page](https://ollama.com/library/llama3.2).
 
 ```bash
 ollama pull llama3.2
 ```
 
-### 4. Start ULTRON for development
+### 4. Start Ultron AI for development
 
 On macOS:
 
@@ -209,15 +209,15 @@ window.
 
 ## Set up an installed copy
 
-After you create a local account, ULTRON shows a six-step Quick Tour. It is
+After you create a local account, Ultron AI shows a six-step Quick Tour. It is
 designed to get a new installation running without a technical setup screen:
 
 1. Connect Ollama only if you want local AI replies.
-2. Choose an Obsidian vault only if you want ULTRON to browse local notes.
+2. Choose an Obsidian vault only if you want Ultron AI to browse local notes.
 3. On macOS, add Gmail through macOS Internet Accounts only if you want the Mail tools. Windows leaves Mail disabled until a dedicated provider integration is available.
 4. Open Devices and choose a printer profile when you want read-only status through USB, OctoPrint or Moonraker. Use Model Deck to choose a file, open a linked local app for its own printer setup, or pass the file to Cura, Bambu Studio, OrcaSlicer, PrusaSlicer or another local app.
 5. Press **VAULT** in chat only when you want that command written to the
-   ULTRON note; ordinary chat is not silently archived.
+   Ultron AI note; ordinary chat is not silently archived.
 6. Set a Global Position only when you choose to search for a place or use the
    device-location control.
 
@@ -227,9 +227,9 @@ again from **Settings → Advanced → Open Quick Tour**.
 <details>
 <summary><strong>Account email and password recovery</strong></summary>
 
-ULTRON accounts live on the local installation. SMTP is optional: leave its fields empty for an offline local account.
+Ultron AI accounts live on the local installation. SMTP is optional: leave its fields empty for an offline local account.
 
-If you configure SMTP, ULTRON delivers a short, one-time verification or recovery code. Email credentials require SSL or STARTTLS by default. The code expires and can be used once.
+If you configure SMTP, Ultron AI delivers a short, one-time verification or recovery code. Email credentials require SSL or STARTTLS by default. The code expires and can be used once.
 
 The assistant's Mail integration is separate: on macOS it operates through the account already configured in Mail and sends a message only from an explicit reviewed action. It is not included in the Windows package.
 
@@ -238,7 +238,7 @@ The assistant's Mail integration is separate: on macOS it operates through the a
 <details>
 <summary><strong>Advanced configuration for source builds</strong></summary>
 
-This section applies only when you cloned the repository and run ULTRON from
+This section applies only when you cloned the repository and run Ultron AI from
 source. It does **not** apply to a downloaded installer: configure supported
 integrations there through the app's Settings screens instead.
 
@@ -264,7 +264,7 @@ Never commit `backend/.env`, a vault, a database or an API key.
 
 | Protection | Implementation |
 | --- | --- |
-| **Account separation** | Each ULTRON account has its own local profile, configuration, skills and memory database. |
+| **Account separation** | Each Ultron AI account has its own local profile, configuration, skills and memory database. |
 | **Password protection** | Passwords use scrypt hashes; session tokens are stored only as hashes in the local database. |
 | **Desktop channel** | The local backend uses a random port and a per-launch capability generated by Electron. |
 | **Browser isolation** | Electron uses context isolation, sandboxing, disabled Node integration, strict navigation controls and an app-owned origin. |
@@ -273,11 +273,11 @@ Never commit `backend/.env`, a vault, a database or an API key.
 | **Fabrication boundary** | Printer profiles are account-scoped; saved network targets must resolve to local addresses; secrets use the platform credential store when available and otherwise remain session-only. They never appear in API responses or JSON profile files. |
 
 > [!NOTE]
-> ULTRON profiles are separate accounts within one operating-system user account. They do not protect files from somebody who can already use that same macOS or Windows account. Use separate operating-system accounts for separate people.
+> Ultron AI profiles are separate accounts within one operating-system user account. They do not protect files from somebody who can already use that same macOS or Windows account. Use separate operating-system accounts for separate people.
 
 ### External requests
 
-ULTRON stays local unless you enable a feature that needs an external service:
+Ultron AI stays local unless you enable a feature that needs an external service:
 
 - downloading or updating a model through Ollama;
 - optional SMTP verification or recovery mail;
@@ -292,7 +292,7 @@ ULTRON stays local unless you enable a feature that needs an external service:
   in memory while the local core is running;
 - weather refreshes through Open-Meteo.
 
-Printer profiles are not an external cloud request: ULTRON accepts only the
+Printer profiles are not an external cloud request: Ultron AI accepts only the
 single local USB port or private LAN address you explicitly select. Bambu Lab
 file handoff is available through Bambu Studio; Bambu printer pairing and
 printer control remain inside Bambu Studio.
@@ -317,7 +317,7 @@ check the archive and produce installer, portable archive and checksum files.
 The packaged app is created below:
 
 ~~~text
-desktop/out/ULTRON ai-darwin-arm64/ULTRON ai.app
+desktop/out/Ultron AI-darwin-arm64/Ultron AI.app
 ~~~
 
 ### macOS Intel
@@ -332,7 +332,7 @@ Use an Intel Mac or native Intel macOS runner:
 The packaged app is created below:
 
 ~~~text
-desktop/out/ULTRON ai-darwin-x64/ULTRON ai.app
+desktop/out/Ultron AI-darwin-x64/Ultron AI.app
 ~~~
 
 ### Windows x64
@@ -372,7 +372,7 @@ The checks use temporary data and no real account, model, printer, slicer or LAN
 ## Project map
 
 ```text
-ULTRON/
+Ultron-AI/
 ├── backend/       FastAPI core, local accounts, memory and integrations
 ├── frontend/      React interface and the Neural Core visual system
 ├── desktop/       Electron shell, security boundary and native desktop packaging

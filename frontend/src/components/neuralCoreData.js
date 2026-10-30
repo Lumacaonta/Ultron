@@ -82,8 +82,8 @@ export function describeCoreNode(node = {}) {
     relation: base.relation || 'unclassified connection',
     strength: Number(base.strength ?? 0.5),
     type: base.type || (id === 'operator' ? 'SOVEREIGN CORE' : 'NEURAL ENTITY'),
-    source: base.source || 'ULTRON MEMORY',
-    description: base.description || `${base.name || 'This node'} is indexed in the ULTRON neural network.`,
+    source: base.source || 'Ultron AI Memory',
+    description: base.description || `${base.name || 'This node'} is indexed in the Ultron AI neural network.`,
     path: base.path || '',
     linkCount: Number(base.linkCount ?? linkCount),
   }

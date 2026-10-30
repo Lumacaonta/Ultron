@@ -1003,7 +1003,7 @@ export default function ModelDeckPage({
       const content = await fetch(`${BACKEND}/api/models/file?path=${encodeURIComponent(selectedAsset.path)}`)
       if (!content.ok) {
         const contentPayload = await content.json().catch(() => null)
-        throw new Error(responseMessage(contentPayload, 'ULTRON could not read the selected model.'))
+        throw new Error(responseMessage(contentPayload, 'Ultron AI non è riuscito a leggere il modello selezionato.'))
       }
       const buffer = await content.arrayBuffer()
       const parsed = await parseModel(selectedAsset.extension, buffer)
@@ -1202,7 +1202,7 @@ export default function ModelDeckPage({
   }, [asset, model, rendererAvailable, stats])
 
   return (
-    <section className="model-deck" aria-label="ULTRON fabrication model deck">
+    <section className="model-deck" aria-label="Ultron AI fabrication model deck">
       <div className="model-deck-grid" aria-hidden="true" />
       <header className="model-deck-header">
         <div className="model-deck-title-group">
@@ -1281,7 +1281,7 @@ export default function ModelDeckPage({
                 {appsLoading ? 'SYNC…' : 'SYNC'}
               </button>
             </div>
-            <p>Link a local slicer, CAD tool or printer studio. ULTRON opens only the app and model you explicitly select.</p>
+            <p>Collega uno slicer, uno strumento CAD o un software per stampanti locale. Ultron AI apre soltanto l’app e il modello che scegli esplicitamente.</p>
             {externalApps.length > 0 ? (
               <div className="model-deck-software-list" role="list" aria-label="Linked external applications">
                 {externalApps.map(app => (
@@ -1360,7 +1360,7 @@ export default function ModelDeckPage({
           <span>{error || notice}</span>
         </div>
         <div className="model-deck-actions">
-          <ActionButton onClick={selectAsset} disabled={!canSelect} tone="primary" title={backendOnline ? 'Select a local STL, OBJ, 3MF, AMF, PLY or G-code file' : 'Connect to the local ULTRON Core first'}>
+          <ActionButton onClick={selectAsset} disabled={!canSelect} tone="primary" title={backendOnline ? 'Select a local STL, OBJ, 3MF, AMF, PLY or G-code file' : 'Connetti prima il Core locale di Ultron AI'}>
             {loading ? 'READING ASSET…' : 'SELECT ASSET'}
           </ActionButton>
           <ActionButton onClick={launchCura} disabled={!asset || Boolean(actionLoading)} tone="danger" title="Open this asset in Ultimaker Cura">

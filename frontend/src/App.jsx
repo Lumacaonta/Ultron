@@ -43,10 +43,30 @@ function weatherIcon(code) {
 }
 
 const NAVIGATION_ITEMS = [
-  { id: 'AGENT', label: 'Agent', icon: 'agent' },
-  { id: 'MEMORY', label: 'Memory', icon: 'memory' },
-  { id: 'DEVICES', label: 'Devices', icon: 'devices' },
-  { id: 'SETTINGS', label: 'Settings', icon: 'settings' },
+  {
+    id: 'AGENT',
+    label: 'Chat',
+    icon: 'agent',
+    description: 'Parla con Ultron AI e conserva solo ciò che scegli.',
+  },
+  {
+    id: 'MEMORY',
+    label: 'Memoria',
+    icon: 'memory',
+    description: 'Cerca e consulta le note del tuo vault.',
+  },
+  {
+    id: 'DEVICES',
+    label: 'Dispositivi',
+    icon: 'devices',
+    description: 'Gestisci Mac, stampante 3D e modelli.',
+  },
+  {
+    id: 'SETTINGS',
+    label: 'Impostazioni',
+    icon: 'settings',
+    description: 'Collega servizi e personalizza Ultron AI.',
+  },
 ]
 
 function loadPreferences(storageKey) {
@@ -310,7 +330,7 @@ function ObsidianArchiveCard({ archive }) {
       {ok ? (
         <div className="obsidian-archive-details">
           <strong>{archive.title || 'NEURAL CORE ENTRY'}</strong>
-          <span>{archive.path || 'ULTRON/Neural Core.md'}</span>
+          <span>{archive.path || 'Ultron AI/Neural Core.md'}</span>
           <em>{saved ? `${saved} CORE LINK${saved === 1 ? '' : 'S'} UPDATED` : 'VAULT ENTRY SAVED'}</em>
         </div>
       ) : (
@@ -668,7 +688,23 @@ function AgentChat({
   obsidianArmed,
   onToggleObsidian,
   voice,
+  onOpenMemory,
+  onOpenDevices,
 }) {
+  const inputRef = useRef(null)
+
+  function focusInput() {
+    window.requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
+  function startVaultNote() {
+    if (!obsidianArmed) {
+      onToggleObsidian()
+    }
+
+    focusInput()
+  }
+
   function submit() {
     const value = input.trim()
 
@@ -695,8 +731,8 @@ function AgentChat({
     <div className="agent-chat">
       <div className="agent-chat-head">
         <div className="agent-identity">
-          <span>PRIVATE CHANNEL // 01</span>
-          <strong>AGENT CONSOLE</strong>
+          <span>CHAT PRIVATA</span>
+          <strong>Ultron AI</strong>
         </div>
         <button
           type="button"
@@ -704,10 +740,29 @@ function AgentChat({
           onClick={onToggleObsidian}
           disabled={sending}
           aria-pressed={obsidianArmed}
-          title="Archive the next command in the connected Obsidian vault"
+          title="Salva il prossimo messaggio nel vault Obsidian collegato"
         >
           <i />
-          <em>{obsidianArmed ? 'VAULT ARMED' : 'VAULT'}</em>
+          <em>{obsidianArmed ? 'Vault attivo' : 'Salva nel vault'}</em>
+        </button>
+      </div>
+
+      <div className="agent-quick-actions" aria-label="Azioni rapide">
+        <button
+          type="button"
+          onClick={startVaultNote}
+          disabled={sending}
+          title="Salva una nota nel vault"
+          aria-label="Salva una nota nel vault"
+        >
+          <span aria-hidden="true">+</span>
+          Nota
+        </button>
+        <button type="button" onClick={onOpenMemory} title="Apri Memoria">
+          Memoria
+        </button>
+        <button type="button" onClick={onOpenDevices} title="Apri modelli 3D">
+          Modelli
         </button>
       </div>
 
@@ -720,8 +775,8 @@ function AgentChat({
             <div className="agent-message-meta">
               <span className="agent-message-role">
                 {message.role === "user"
-                  ? "YOU"
-                  : "ULTRON"}
+                  ? "Tu"
+                  : "Ultron AI"}
               </span>
               <time>{formatChatTime(message.createdAt)}</time>
             </div>
@@ -756,7 +811,7 @@ function AgentChat({
         {sending && (
           <div className="agent-message assistant">
             <span className="agent-message-role">
-              ULTRON
+              Ultron AI
             </span>
 
             <div className="agent-thinking">
@@ -770,21 +825,23 @@ function AgentChat({
 
       {(voice.liveTranscript || voice.draft || voice.error) && (
         <div className={`agent-voice-readout ${voice.phase === 'error' ? 'error' : ''}`}>
-          <span>{voice.error ? 'VOICE LINK // ERROR' : `VOICE LINK // ${voice.phase.toUpperCase()}`}</span>
+          <span>{voice.error ? 'VOCE NON DISPONIBILE' : `VOCE · ${voice.phase.toUpperCase()}`}</span>
           <strong>{voice.error || voice.liveTranscript || voice.draft}</strong>
         </div>
       )}
 
       <div className="agent-input-wrap">
         <textarea
+          ref={inputRef}
           value={input}
           onChange={(event) =>
             setInput(event.target.value)
           }
           onKeyDown={handleKeyDown}
-          placeholder="Issue command…"
+          placeholder="Scrivi a Ultron AI…"
           rows={1}
           disabled={sending}
+          aria-label="Messaggio per Ultron AI"
         />
 
         <button
@@ -792,8 +849,8 @@ function AgentChat({
           className={`agent-voice ${voice.phase !== 'off' ? 'active' : ''}`}
           onClick={voice.phase === 'off' || voice.phase === 'error' ? voice.start : voice.stop}
           disabled={!voice.supported && voice.phase === 'off'}
-          title={voice.supported ? 'Arm ULTRON voice command' : 'Voice input unavailable'}
-          aria-label={voice.supported ? 'Arm ULTRON voice command' : 'Voice input unavailable'}
+          title={voice.supported ? 'Avvia o interrompi l’input vocale' : 'Input vocale non disponibile'}
+          aria-label={voice.supported ? 'Avvia o interrompi l’input vocale' : 'Input vocale non disponibile'}
         >
           <span>◉</span>
         </button>
@@ -801,10 +858,10 @@ function AgentChat({
 
       <div className="agent-hint">
         {obsidianArmed
-          ? 'VAULT ARMED // ENTER COMMITS THIS COMMAND TO OBSIDIAN'
+          ? 'Questo messaggio verrà salvato nel vault.'
           : voice.supported
-            ? (voice.phase === 'off' ? 'ENTER // EXECUTE · MIC TO ADDRESS ULTRON' : `VOICE // ${voice.phase.toUpperCase()} · 5S SILENCE TO EXECUTE`)
-            : 'ENTER // EXECUTE · VOICE UNAVAILABLE'}
+            ? (voice.phase === 'off' ? 'Invio per inviare · microfono per parlare' : `Voce ${voice.phase.toLowerCase()} · Ultron AI risponde dopo 5 secondi di silenzio`)
+            : 'Invio per inviare · input vocale non disponibile'}
       </div>
     </div>
   )
@@ -1007,7 +1064,7 @@ function App({ user = null, onLogout = () => {} }) {
       {
         id: 'ultron-bootstrap',
         role: "assistant",
-        text: "ULTRON online. I'm listening.",
+        text: 'Ultron AI è online. Ti ascolto.',
         speak: false,
         createdAt: INITIAL_CHAT_TIMESTAMP,
       },
@@ -1277,7 +1334,7 @@ function App({ user = null, onLogout = () => {} }) {
       if (!response.ok || !result.ok) {
         return {
           ok: false,
-          error: result.detail || result.error || 'ULTRON could not write this command to Obsidian.',
+          error: result.detail || result.error || 'Ultron AI non è riuscito a scrivere questo comando in Obsidian.',
         }
       }
 
@@ -1286,7 +1343,7 @@ function App({ user = null, onLogout = () => {} }) {
     } catch (error) {
       return {
         ok: false,
-        error: error?.message || 'ULTRON Core is unavailable.',
+        error: error?.message || 'Il Core di Ultron AI non è disponibile.',
       }
     }
   }
@@ -1413,7 +1470,7 @@ function App({ user = null, onLogout = () => {} }) {
         : null
 
       const reply =
-        "I can't reach the ULTRON core right now."
+        "Non riesco a raggiungere il Core di Ultron AI in questo momento."
 
       setAgentMessages(
         previous => {
@@ -1685,7 +1742,7 @@ function App({ user = null, onLogout = () => {} }) {
     } catch {
       return {
         ok: false,
-        error: 'The ULTRON Core is unavailable. Restart ULTRON and try again.',
+        error: 'Il Core di Ultron AI non è disponibile. Riavvia Ultron AI e riprova.',
       }
     }
   }
@@ -1767,6 +1824,10 @@ function App({ user = null, onLogout = () => {} }) {
   const upload =
     system?.upload_mbps
 
+  const activeNavigation =
+    NAVIGATION_ITEMS.find(item => item.id === activePage) ||
+    NAVIGATION_ITEMS.find(item => item.id === 'DEVICES')
+
   return (
     <div
       className={`ultron page-${activePage.toLowerCase().replace(/_/g, '-')}`}
@@ -1814,7 +1875,7 @@ function App({ user = null, onLogout = () => {} }) {
 
           <div className="logo-copy">
             <span className="logo-word">
-              ULTRON
+              Ultron AI
             </span>
 
             <span className="logo-ai">
@@ -1824,7 +1885,7 @@ function App({ user = null, onLogout = () => {} }) {
         </div>
 
         <div className="top-status">
-          <div className="top-online" role="status" aria-label="ULTRON online">
+          <div className="top-online" role="status" aria-label="Ultron AI online">
             <span className="status-dot" />
             <span>ONLINE</span>
           </div>
@@ -1855,26 +1916,30 @@ function App({ user = null, onLogout = () => {} }) {
 
         <div className="top-account" aria-label="Current local account">
           <div>
-            <span>OPERATOR</span>
+            <span>OPERATORE</span>
             <strong title={accountName}>{accountName}</strong>
           </div>
-          <button type="button" onClick={onLogout} title="Sign out of this local account">
-            SIGN OUT
+          <button type="button" onClick={onLogout} title="Esci da questo account locale">
+            ESCI
           </button>
         </div>
       </header>
 
       <aside className="menu">
 
-        <div className="menu-label">COMMAND</div>
+        <div className="menu-label">SPAZI DI LAVORO</div>
 
         {NAVIGATION_ITEMS.map(
-          item => (
+          item => {
+            const isActive = activePage === item.id || (
+              activePage === 'MODEL_DECK' && item.id === 'DEVICES'
+            )
+
+            return (
             <button
               key={item.id}
               className={
-                activePage ===
-                item.id
+                isActive
                   ? 'active'
                   : ''
               }
@@ -1883,6 +1948,8 @@ function App({ user = null, onLogout = () => {} }) {
                   item.id
                 )
               }
+              aria-current={isActive ? 'page' : undefined}
+              title={item.description}
             >
               <span className="menu-button-main">
                 <NavIcon name={item.icon} />
@@ -1890,8 +1957,14 @@ function App({ user = null, onLogout = () => {} }) {
               </span>
               <span className="menu-indicator" />
             </button>
-          )
+            )
+          }
         )}
+
+        <div className="menu-context" aria-live="polite">
+          <strong>{activeNavigation?.label}</strong>
+          <span>{activeNavigation?.description}</span>
+        </div>
 
       </aside>
 
@@ -1935,8 +2008,8 @@ function App({ user = null, onLogout = () => {} }) {
             className="selection-card"
           >
             <div className="selection-card-head">
-              <div className="selection-label">SELECTED NODE</div>
-              <span>LOCKED</span>
+              <div className="selection-label">NODO SELEZIONATO</div>
+              <span>PROTETTO</span>
             </div>
 
             <div className="selection-name">
@@ -1948,10 +2021,10 @@ function App({ user = null, onLogout = () => {} }) {
             </p>
 
             <div className="selection-data">
-              <div><span>RELATION</span><strong>{selected.relation}</strong></div>
-              <div><span>TYPE</span><strong>{selected.type}</strong></div>
-              <div><span>SOURCE</span><strong>{selected.source}</strong></div>
-              <div><span>LINKS</span><strong>{selected.linkCount || 0}</strong></div>
+              <div><span>RELAZIONE</span><strong>{selected.relation}</strong></div>
+              <div><span>TIPO</span><strong>{selected.type}</strong></div>
+              <div><span>ORIGINE</span><strong>{selected.source}</strong></div>
+              <div><span>CONNESSIONI</span><strong>{selected.linkCount || 0}</strong></div>
             </div>
 
             {selected.path && <div className="selection-path">{selected.path}</div>}
@@ -1961,7 +2034,7 @@ function App({ user = null, onLogout = () => {} }) {
               className="selection-open-memory"
               onClick={() => setActivePage('MEMORY')}
             >
-              OPEN MEMORY ARCHIVE
+              APRI IN MEMORIA
             </button>
           </div>
         )}
@@ -1982,6 +2055,8 @@ function App({ user = null, onLogout = () => {} }) {
                 obsidianArmed={obsidianArmed}
                 onToggleObsidian={() => setObsidianArmed(current => !current)}
                 voice={voice}
+                onOpenMemory={() => setActivePage('MEMORY')}
+                onOpenDevices={() => setActivePage('DEVICES')}
               />
           )}
 
@@ -2045,10 +2120,10 @@ function App({ user = null, onLogout = () => {} }) {
 
         <div className="panel-title">
           <div>
-            <span>LOCAL SYSTEM</span>
+            <span>SISTEMA LOCALE</span>
             <strong>{system?.hostname || 'LOCAL HOST'}</strong>
           </div>
-          <span className="system-live">LIVE</span>
+          <span className="system-live">ATTIVO</span>
         </div>
 
         <SystemCard

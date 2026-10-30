@@ -32,13 +32,13 @@ assert.ok(
 )
 assert.equal(
   installerMaker.config?.exe,
-  'ULTRON ai.exe',
-  'Squirrel must install the packaged ULTRON executable.'
+  'Ultron AI.exe',
+  'Squirrel must install the packaged Ultron AI executable.'
 )
 assert.equal(
   installerMaker.config?.noMsi,
   true,
-  'ULTRON publishes one explicit Setup.exe installer.'
+  'Ultron AI publishes one explicit Setup.exe installer.'
 )
 assert.ok(
   fs.existsSync(path.join(projectRoot, 'desktop', 'assets', 'ultron-apple-black.ico')),
@@ -109,4 +109,4 @@ assert.ok(
   'The Windows package verifier must normalize asar path separators.'
 )
 
-console.log('ULTRON Windows packaging configuration verified')
+console.log('Ultron AI Windows packaging configuration verified')

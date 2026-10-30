@@ -23,7 +23,7 @@ $ReleaseDirectory = if ([string]::IsNullOrWhiteSpace($env:ULTRON_RELEASE_DIR)) {
 } else {
     $env:ULTRON_RELEASE_DIR
 }
-$PackageDirectory = Join-Path $DesktopRoot 'out\ULTRON ai-win32-x64'
+$PackageDirectory = Join-Path $DesktopRoot 'out\Ultron AI-win32-x64'
 
 if (Test-Path -LiteralPath $ReleaseDirectory) {
     Remove-Item -LiteralPath $ReleaseDirectory -Recurse -Force
@@ -58,8 +58,8 @@ if ($null -eq $ZipSource) {
     throw 'Electron Forge did not create a portable Windows ZIP archive.'
 }
 
-$SetupArchive = Join-Path $ReleaseDirectory "ULTRON-ai-$Version-windows-x64-Setup.exe"
-$ZipArchive = Join-Path $ReleaseDirectory "ULTRON-ai-$Version-windows-x64.zip"
+$SetupArchive = Join-Path $ReleaseDirectory "Ultron-AI-$Version-windows-x64-Setup.exe"
+$ZipArchive = Join-Path $ReleaseDirectory "Ultron-AI-$Version-windows-x64.zip"
 Copy-Item -LiteralPath $SetupSource.FullName -Destination $SetupArchive -Force
 Copy-Item -LiteralPath $ZipSource.FullName -Destination $ZipArchive -Force
 
@@ -70,7 +70,7 @@ $Archive = [System.IO.Compression.ZipFile]::OpenRead($ZipArchive)
 try {
     $ArchiveEntries = @($Archive.Entries | ForEach-Object { $_.FullName })
     foreach ($RequiredSuffix in @(
-        '/ULTRON ai.exe',
+        '/Ultron AI.exe',
         '/resources/app.asar',
         '/resources/backend/ultron-backend.exe',
         '/resources/frontend/index.html'
@@ -97,7 +97,7 @@ if ($RequireSignature) {
 
 $SetupChecksum = "$SetupArchive.sha256"
 $ZipChecksum = "$ZipArchive.sha256"
-$Manifest = Join-Path $ReleaseDirectory "ULTRON-ai-$Version-windows-x64-SHA256SUMS.txt"
+$Manifest = Join-Path $ReleaseDirectory "Ultron-AI-$Version-windows-x64-SHA256SUMS.txt"
 foreach ($Item in @(
     @{ Path = $SetupArchive; Destination = $SetupChecksum },
     @{ Path = $ZipArchive; Destination = $ZipChecksum }

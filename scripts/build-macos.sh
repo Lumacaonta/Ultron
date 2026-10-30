@@ -138,14 +138,14 @@ touch "${FRONTEND_TARGET}/.gitkeep" "${BACKEND_TARGET_DIR}/.gitkeep"
 
 npm --prefix "${PROJECT_ROOT}/desktop" run package -- "--arch=${ELECTRON_ARCH}"
 
-PACKAGE_APP="${PROJECT_ROOT}/desktop/out/ULTRON ai-darwin-${ELECTRON_ARCH}/ULTRON ai.app"
+PACKAGE_APP="${PROJECT_ROOT}/desktop/out/Ultron AI-darwin-${ELECTRON_ARCH}/Ultron AI.app"
 
 if [[ ! -d "${PACKAGE_APP}" ]]; then
   printf 'Electron packaging did not create %s.\n' "${PACKAGE_APP}" >&2
   exit 1
 fi
 
-APP_EXECUTABLE="${PACKAGE_APP}/Contents/MacOS/ULTRON ai"
+APP_EXECUTABLE="${PACKAGE_APP}/Contents/MacOS/Ultron AI"
 if ! lipo -archs "${APP_EXECUTABLE}" | tr ' ' '\n' | grep -Fxq "${TARGET_MACHINE}"; then
   printf 'The Electron executable does not include %s: %s\n' \
     "${TARGET_MACHINE}" "${APP_EXECUTABLE}" >&2
