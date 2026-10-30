@@ -17,7 +17,7 @@ Read [platform support](PLATFORM_SUPPORT.md) before publishing. A platform is
 supported only when its matching artifact is attached to the GitHub release.
 
 The project is currently an early preview. Publish clear candidate notes and
-link people to [GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions)
+link people to [the public feedback hub](https://github.com/Lumacaonta/Ultron/issues/1)
 for feedback, rather than presenting a candidate as a finished or fully signed
 product.
 

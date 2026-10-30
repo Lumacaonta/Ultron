@@ -24,14 +24,14 @@
   <a href="#privacy-and-security">Privacy</a> ·
   <a href="#build-desktop-packages">Build</a> ·
   <a href="docs/RELEASE.md">Release guide</a> ·
-  <a href="https://github.com/Lumacaonta/Ultron-AI/discussions">Feedback</a>
+  <a href="https://github.com/Lumacaonta/Ultron/issues/1">Feedback</a>
 </p>
 
 > [!WARNING]
 > **Early preview / versione ancora acerba.** Ultron AI is a work in progress:
 > some workflows can change, feel incomplete, or need fixing. Please help shape
 > it by sharing bugs, ideas, missing features and real-world feedback in
-> [GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions).
+> [the public feedback hub](https://github.com/Lumacaonta/Ultron/issues/1).
 
 ## See Ultron AI in action
 
@@ -99,10 +99,10 @@ before downloading a candidate.
 
 Ultron AI is deliberately published as an early preview so that people can try
 it and help guide what comes next. Use
-[GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions) for
-ideas, questions, examples of your setup and feature requests; use a GitHub
-issue when you can describe a reproducible bug. Do not post passwords, private
-vault content, email addresses, access tokens or printer credentials.
+[the public feedback hub](https://github.com/Lumacaonta/Ultron/issues/1) for
+ideas, questions, examples of your setup and feature requests. Use a separate
+GitHub issue when you can describe a reproducible bug. Do not post passwords,
+private vault content, email addresses, access tokens or printer credentials.
 
 
 ---

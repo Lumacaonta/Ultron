@@ -22,7 +22,7 @@ Ultron AI is still an early, evolving preview. A published candidate can be
 useful for trying the current workflow, but it may contain rough edges and its
 features can change as the app improves. Please share ideas, questions,
 real-world results and improvement requests in
-[GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions).
+[the public feedback hub](https://github.com/Lumacaonta/Ultron/issues/1).
 
 When reporting a problem, include the operating system, the app version and
 clear reproduction steps. Never post an account password, access token, vault
