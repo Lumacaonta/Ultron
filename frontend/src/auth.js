@@ -144,9 +144,9 @@ function notifyUnauthorized(url) {
 }
 
 /**
- * Stores the local account session only for the current app session. It is
- * deliberately not persisted in localStorage, which keeps shared computers
- * from reopening another operator's session after the app is closed.
+ * Keeps the renderer's active account token scoped to this page session. The
+ * installed Electron app may additionally retain an encrypted copy in the
+ * operating system credential store, but it is never written to localStorage.
  */
 export function getSessionToken() {
   return getBrowserStorage()?.getItem(SESSION_TOKEN_KEY) || ''
@@ -177,6 +177,35 @@ function clearDesktopSessionToken() {
     result => result?.ok === true,
     () => false,
   )
+}
+
+function restoreDesktopSessionToken() {
+  const bridge = desktopSessionBridge()
+  if (typeof bridge?.restoreSessionToken !== 'function') return Promise.resolve('')
+
+  return Promise.resolve(bridge.restoreSessionToken()).then(
+    result => {
+      const token = typeof result?.token === 'string' ? result.token : ''
+      return /^[A-Za-z0-9_-]{32,512}$/.test(token) ? token : ''
+    },
+    () => '',
+  )
+}
+
+/**
+ * Restore a trusted local-desktop session after the app is reopened. Browsers
+ * and development builds have no privileged bridge, so they remain
+ * session-only. An explicit logout always clears both copies.
+ */
+export async function restoreSessionToken() {
+  const active = getSessionToken()
+  if (active) return active
+
+  const restored = await restoreDesktopSessionToken()
+  if (restored) {
+    getBrowserStorage()?.setItem(SESSION_TOKEN_KEY, restored)
+  }
+  return restored
 }
 
 export function setSessionToken(token) {

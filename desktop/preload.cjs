@@ -7,12 +7,14 @@ const { contextBridge, ipcRenderer } = require('electron')
  * ULTRON's private renderer origin before showing a dialog.
  */
 contextBridge.exposeInMainWorld('ultronDesktop', {
-  // The renderer may synchronize its current session token, but the token
-  // never becomes a durable Electron setting and does not expose raw IPC.
+  // The renderer may synchronize and restore its current local session. The
+  // main process keeps any durable copy encrypted with OS credential storage;
+  // this narrow bridge never exposes raw IPC or filesystem access.
   syncSessionToken: token => ipcRenderer.invoke(
     'ultron:sync-session-token',
     typeof token === 'string' ? token : ''
   ),
+  restoreSessionToken: () => ipcRenderer.invoke('ultron:restore-session-token'),
   clearSessionToken: () => ipcRenderer.invoke('ultron:clear-session-token'),
   selectModel: () => ipcRenderer.invoke('ultron:select-model'),
   selectExternalApp: label => ipcRenderer.invoke(

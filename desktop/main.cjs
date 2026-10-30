@@ -6,6 +6,7 @@ const {
   session,
   protocol,
   net: electronNet,
+  safeStorage,
   dialog,
   ipcMain,
 } = require('electron')
@@ -46,9 +47,11 @@ let backendPort = null
 let backendLaunchSecret = null
 let backendInstanceId = null
 let backendDesktopPickerSecret = null
-// The account bearer token lives only in Electron main for the lifetime of
-// this window. It lets the native picker prove both the local account and the
-// native dialog result to the loopback Core; it is never written to disk.
+// The active token stays in Electron main while the app is open. A valid
+// session may additionally be encrypted with the operating system's native
+// credential protection so the same macOS/Windows user can reopen the app
+// without entering the password again. The renderer receives it only through
+// a trusted IPC request and keeps only an in-memory session copy.
 let backendSessionToken = null
 let window = null
 let f14Registered = false
@@ -441,6 +444,96 @@ function normalizeDesktopSessionToken(value) {
   return /^[A-Za-z0-9_-]{32,512}$/.test(token) ? token : ''
 }
 
+function persistentSessionFile() {
+  return path.join(app.getPath('userData'), 'local-session.bin')
+}
+
+function canPersistDesktopSession() {
+  // Development sessions intentionally remain ephemeral so a source checkout
+  // can never leave an account token behind by accident.
+  if (!app.isPackaged) {
+    return false
+  }
+
+  if (
+    !safeStorage ||
+    typeof safeStorage.isEncryptionAvailable !== 'function' ||
+    !safeStorage.isEncryptionAvailable()
+  ) {
+    return false
+  }
+
+  // Electron can fall back to plaintext storage on some Linux setups. Never
+  // retain an account session unless the selected backend is actually secure.
+  if (typeof safeStorage.getSelectedStorageBackend === 'function') {
+    try {
+      if (safeStorage.getSelectedStorageBackend() === 'basic_text') {
+        return false
+      }
+    } catch {
+      return false
+    }
+  }
+
+  return true
+}
+
+function clearPersistedDesktopSession() {
+  try {
+    fs.rmSync(persistentSessionFile(), { force: true })
+  } catch {
+    // A stale encrypted token must never stop an explicit local logout.
+  }
+}
+
+function persistDesktopSession(token) {
+  if (!canPersistDesktopSession()) {
+    clearPersistedDesktopSession()
+    return false
+  }
+
+  const target = persistentSessionFile()
+  const temporary = `${target}.${process.pid}.${crypto.randomBytes(8).toString('hex')}.tmp`
+
+  try {
+    fs.mkdirSync(path.dirname(target), { recursive: true, mode: 0o700 })
+    fs.writeFileSync(temporary, safeStorage.encryptString(token), { mode: 0o600 })
+    fs.chmodSync(temporary, 0o600)
+    fs.renameSync(temporary, target)
+    fs.chmodSync(target, 0o600)
+    return true
+  } catch {
+    try {
+      fs.rmSync(temporary, { force: true })
+    } catch {}
+    clearPersistedDesktopSession()
+    return false
+  }
+}
+
+function restorePersistedDesktopSession() {
+  if (!canPersistDesktopSession()) {
+    clearPersistedDesktopSession()
+    return ''
+  }
+
+  try {
+    const encrypted = fs.readFileSync(persistentSessionFile())
+    const token = normalizeDesktopSessionToken(
+      safeStorage.decryptString(encrypted)
+    )
+
+    if (token) {
+      return token
+    }
+  } catch {
+    // Missing, corrupted, or undecryptable state is treated as signed out.
+  }
+
+  clearPersistedDesktopSession()
+  return ''
+}
+
 function requireTrustedRendererEvent(event) {
   if (!isTrustedRendererEvent(event)) {
     throw new Error('The ULTRON desktop request was not verified.')
@@ -503,15 +596,30 @@ function registerDesktopPickers() {
     const normalized = normalizeDesktopSessionToken(token)
     if (!normalized) {
       backendSessionToken = null
+      clearPersistedDesktopSession()
       return { ok: false }
     }
     backendSessionToken = normalized
-    return { ok: true }
+    return { ok: true, persistent: persistDesktopSession(normalized) }
+  })
+
+  ipcMain.handle('ultron:restore-session-token', event => {
+    requireTrustedRendererEvent(event)
+    const token = restorePersistedDesktopSession()
+
+    if (!token) {
+      backendSessionToken = null
+      return { ok: false }
+    }
+
+    backendSessionToken = token
+    return { ok: true, token }
   })
 
   ipcMain.handle('ultron:clear-session-token', event => {
     requireTrustedRendererEvent(event)
     backendSessionToken = null
+    clearPersistedDesktopSession()
     return { ok: true }
   })
 

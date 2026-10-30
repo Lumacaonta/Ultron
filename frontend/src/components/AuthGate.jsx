@@ -11,6 +11,7 @@ import {
   registerAccount,
   requestPasswordReset,
   resendVerification,
+  restoreSessionToken,
   resetPassword,
   setSessionToken,
   verifyEmail,
@@ -66,7 +67,7 @@ function AuthShell({ children, mode, setMode, feedback, feedbackTone, submitting
           <span className="auth-kicker">ACCESSO PRIVATO</span>
           <h1>{isLogin ? 'Apri il tuo spazio locale' : mode === 'register' ? 'Crea il tuo spazio locale' : mode === 'verify' ? 'Verifica la tua email' : mode === 'request-reset' ? 'Recupera l’accesso' : 'Scegli una nuova password'}</h1>
           <p>
-            Account e memoria restano su questo computer. L’email serve solo se scegli di attivare verifica o recupero accesso.
+            Account e memoria restano su questo computer. Su questo Mac o PC l’accesso resta attivo anche dopo il riavvio; puoi uscire quando vuoi. L’email serve solo se attivi verifica o recupero accesso.
           </p>
         </div>
 
@@ -148,9 +149,10 @@ export default function AuthGate({ children }) {
     let disposed = false
 
     async function initialize() {
-      const savedSession = getSessionToken()
-      // Restored session storage needs the Electron-main bridge too, otherwise
-      // authenticated native file dialogs would lose the signed-in account.
+      const savedSession = await restoreSessionToken()
+      // Page refreshes and restored encrypted sessions both need the Electron
+      // main bridge, otherwise authenticated native file dialogs would lose
+      // the signed-in account after the local Core restarts.
       if (savedSession) {
         await setSessionToken(savedSession)
       }
@@ -277,6 +279,10 @@ export default function AuthGate({ children }) {
           throw new Error('The two passphrases do not match.')
         }
         await resetPassword({ token: form.token.trim(), password: form.password })
+        // The Core revokes every account session after a password reset. Clear
+        // the encrypted local-device copy immediately instead of waiting for
+        // the next restart to discover that it is no longer valid.
+        await clearSessionToken()
         setForm(EMPTY_FORM)
         setMode('login')
         setFeedbackTone('success')

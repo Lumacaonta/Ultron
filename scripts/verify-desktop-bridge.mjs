@@ -25,7 +25,11 @@ for (const [value, message] of [
   ['contextIsolation: true', 'Electron context isolation must stay enabled.'],
   ['sandbox: true', 'The renderer sandbox must stay enabled.'],
   ["'ultron:sync-session-token'", 'The authenticated desktop-session bridge is missing.'],
+  ["'ultron:restore-session-token'", 'The encrypted local-session restore bridge is missing.'],
   ["'ultron:clear-session-token'", 'The desktop-session cleanup bridge is missing.'],
+  ['safeStorage.encryptString(token)', 'A retained local session must be encrypted by Electron.'],
+  ['safeStorage.decryptString(encrypted)', 'A retained local session must be decrypted only in Electron main.'],
+  ["safeStorage.getSelectedStorageBackend() === 'basic_text'", 'Plaintext safeStorage fallback must never retain a session.'],
   ["'/api/models/register'", 'The native model registration route is missing.'],
   ["'Authorization': `Bearer ${backendSessionToken}`", 'Native model registration must use the signed-in session.'],
   ["'X-Ultron-Desktop-Picker': backendDesktopPickerSecret", 'Native model registration must require the desktop capability.'],
@@ -36,6 +40,7 @@ for (const [value, message] of [
 
 for (const [value, message] of [
   ['syncSessionToken:', 'The preload does not expose session synchronization.'],
+  ['restoreSessionToken:', 'The preload does not expose encrypted session restoration.'],
   ['clearSessionToken:', 'The preload does not expose session cleanup.'],
   ['selectModel:', 'The preload does not expose native model selection.'],
   ['selectExternalApp:', 'The preload does not expose native external-app selection.'],
@@ -55,9 +60,11 @@ assert.equal(
   'The preload must not expose local filesystem or process APIs.'
 )
 
-expectIncludes(auth, 'setItem(SESSION_TOKEN_KEY, value)', 'The access token must stay session-scoped.')
+expectIncludes(auth, 'setItem(SESSION_TOKEN_KEY, value)', 'The renderer token must stay session-scoped.')
 expectIncludes(auth, 'syncDesktopSessionToken(token)', 'The renderer must synchronize the active session with Electron.')
+expectIncludes(auth, 'restoreDesktopSessionToken()', 'The renderer must restore only through Electron main.')
 expectIncludes(auth, 'clearDesktopSessionToken()', 'The renderer must clear the Electron session on logout.')
+expectIncludes(authGate, 'await restoreSessionToken()', 'The account gate must restore a trusted local session at startup.')
 expectIncludes(authGate, 'await setSessionToken(result.token)', 'Authentication must synchronize the session before opening the app.')
 
 console.log('Ultron AI desktop bridge security contract verified')

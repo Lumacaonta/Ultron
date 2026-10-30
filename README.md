@@ -23,8 +23,15 @@
   <a href="#what-is-inside">Features</a> ·
   <a href="#privacy-and-security">Privacy</a> ·
   <a href="#build-desktop-packages">Build</a> ·
-  <a href="docs/RELEASE.md">Release guide</a>
+  <a href="docs/RELEASE.md">Release guide</a> ·
+  <a href="https://github.com/Lumacaonta/Ultron-AI/discussions">Feedback</a>
 </p>
+
+> [!WARNING]
+> **Early preview / versione ancora acerba.** Ultron AI is a work in progress:
+> some workflows can change, feel incomplete, or need fixing. Please help shape
+> it by sharing bugs, ideas, missing features and real-world feedback in
+> [GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions).
 
 ## See Ultron AI in action
 
@@ -87,6 +94,15 @@ Gatekeeper warning until Apple notarization is complete; Windows may show a
 SmartScreen warning until Authenticode signing is complete. The GitHub release
 notes state the signing status. Read [platform support](docs/PLATFORM_SUPPORT.md)
 before downloading a candidate.
+
+## Help improve this preview
+
+Ultron AI is deliberately published as an early preview so that people can try
+it and help guide what comes next. Use
+[GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions) for
+ideas, questions, examples of your setup and feature requests; use a GitHub
+issue when you can describe a reproducible bug. Do not post passwords, private
+vault content, email addresses, access tokens or printer credentials.
 
 
 ---

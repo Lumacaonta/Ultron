@@ -16,6 +16,11 @@ This guide covers three native outputs:
 Read [platform support](PLATFORM_SUPPORT.md) before publishing. A platform is
 supported only when its matching artifact is attached to the GitHub release.
 
+The project is currently an early preview. Publish clear candidate notes and
+link people to [GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions)
+for feedback, rather than presenting a candidate as a finished or fully signed
+product.
+
 ## Release safety rules
 
 1. Build each architecture on a **native runner**. PyInstaller embeds native

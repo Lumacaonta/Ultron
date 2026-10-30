@@ -16,6 +16,18 @@ The GitHub Releases page is the source of truth for published assets. An
 architecture is supported only when the matching asset is attached to that
 release and its native release workflow has completed successfully.
 
+## Early preview and public feedback
+
+Ultron AI is still an early, evolving preview. A published candidate can be
+useful for trying the current workflow, but it may contain rough edges and its
+features can change as the app improves. Please share ideas, questions,
+real-world results and improvement requests in
+[GitHub Discussions](https://github.com/Lumacaonta/Ultron-AI/discussions).
+
+When reporting a problem, include the operating system, the app version and
+clear reproduction steps. Never post an account password, access token, vault
+content, personal email or printer credential in a public discussion.
+
 ## Install the matching package
 
 ### Mac with Apple Silicon
